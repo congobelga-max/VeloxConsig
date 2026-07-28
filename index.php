@@ -19,7 +19,7 @@ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.m
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="assets/css/style.css">
 </head>
 
 <body>
@@ -126,7 +126,7 @@ VeloxConsig CRM Mobile
 
 </footer>
 
-<script src="js/app.js"></script>
+<script src="assets/js/app.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <div class="modal fade" id="modalProposta" tabindex="-1" aria-hidden="true">
