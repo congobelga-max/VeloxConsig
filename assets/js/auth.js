@@ -13,9 +13,14 @@
 const AUTH_CONFIG = {
 
     API_LOGIN: "https://api.veloxconsig.com.br/api/auth/login",
+    API_CLIENTES: "https://api.veloxconsig.com.br/api/clientes",
+    API_IMPORTACOES: "https://api.veloxconsig.com.br/api/importacoes-clientes",
 
-    // Preencher com o token da aplicação.
-    TOKEN_APP: "YOUR_SECRET_TOKEN",
+    // Chave da aplicação, enviada no header x-api-key.
+    API_KEY: "r0nRPczxCb00l6kxzGlLBmMjd6UC77fL",
+
+    // Token Bearer. Só é enviado quando preenchido — veja montarCabecalhos().
+    TOKEN_APP: "",
 
     // Validade da sessão local, usada quando a API não informa a dela.
     HORAS_SESSAO: 12,
@@ -33,14 +38,51 @@ const CHAVE_EXPIRA = "auth_expira";
 const CHAVE_EMAIL_LEMBRADO = "auth_email_lembrado";
 
 
+// Lê a claim `exp` de um JWT. O token da API vive 1 hora, bem menos que
+// HORAS_SESSAO — sem isto, a sessão local sobreviveria ao token e o operador
+// levaria 401 a cada ação até perceber que precisa entrar de novo.
+function expiracaoDoToken(token){
+
+    try{
+
+        const partes = String(token || "").split(".");
+
+        if(partes.length !== 3) return null;
+
+        const base64 = partes[1].replace(/-/g,"+").replace(/_/g,"/");
+        const completo = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, "=");
+
+        const dados = JSON.parse(atob(completo));
+
+        return dados && dados.exp
+            ? Number(dados.exp) * 1000
+            : null;
+
+    }catch(erro){
+
+        // Não é JWT ou veio malformado: cai nas outras regras de validade.
+        return null;
+
+    }
+
+}
+
+
 function salvarSessao(token, usuario, expiraEmSegundos){
 
-    const validade = expiraEmSegundos
-        ? Number(expiraEmSegundos) * 1000
-        : AUTH_CONFIG.HORAS_SESSAO * 60 * 60 * 1000;
+    // Precedência: validade do próprio token > expires_in da API > padrão local.
+    const expiraEm = expiracaoDoToken(token);
+
+    const vencimento = expiraEm
+        ? expiraEm
+        : Date.now() + (
+            expiraEmSegundos
+                ? Number(expiraEmSegundos) * 1000
+                : AUTH_CONFIG.HORAS_SESSAO * 60 * 60 * 1000
+        );
 
     localStorage.setItem(CHAVE_TOKEN, token);
-    localStorage.setItem(CHAVE_EXPIRA, String(Date.now() + validade));
+    localStorage.setItem(CHAVE_EXPIRA, String(vencimento));
 
     if(usuario){
         localStorage.setItem(CHAVE_USUARIO, usuario);

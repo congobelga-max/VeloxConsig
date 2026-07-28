@@ -178,6 +178,31 @@ function extrairMensagem(corpo){
 
 
 // ===============================
+// CABEÇALHOS DA REQUISIÇÃO
+// ===============================
+
+function montarCabecalhos(){
+
+    const cabecalhos = {
+        "Content-Type":"application/json",
+        "Accept":"application/json",
+        "x-api-key": AUTH_CONFIG.API_KEY
+    };
+
+    // O Bearer só entra quando há um token de verdade configurado:
+    // enviar o placeholder faria a API recusar por credencial inválida.
+    if(AUTH_CONFIG.TOKEN_APP && AUTH_CONFIG.TOKEN_APP !== "YOUR_SECRET_TOKEN"){
+
+        cabecalhos["Authorization"] = "Bearer " + AUTH_CONFIG.TOKEN_APP;
+
+    }
+
+    return cabecalhos;
+
+}
+
+
+// ===============================
 // ENVIO
 // ===============================
 
@@ -218,11 +243,7 @@ formLogin.addEventListener("submit", async function(evento){
 
         resposta = await fetch(AUTH_CONFIG.API_LOGIN,{
             method:"POST",
-            headers:{
-                "Content-Type":"application/json",
-                "Accept":"application/json",
-                "Authorization":"Bearer " + AUTH_CONFIG.TOKEN_APP
-            },
+            headers: montarCabecalhos(),
             body: JSON.stringify({
                 email: email,
                 password: senha
@@ -232,6 +253,9 @@ formLogin.addEventListener("submit", async function(evento){
     }catch(erro){
 
         // fetch só rejeita por falha de rede ou bloqueio de CORS.
+        // Como x-api-key é um header customizado, o navegador dispara um
+        // preflight OPTIONS antes do POST: a API precisa respondê-lo liberando
+        // esta origem e o header (Access-Control-Allow-Headers: x-api-key).
         carregando(false);
         mostrarErro(
             "Não foi possível falar com o servidor. " +

@@ -5,32 +5,8 @@ body{
     padding-bottom:30px;
 }
 
-header{
+/* O cabeçalho antigo virou .barraTopo + .barraLateral (crm.css). */
 
-	background:#000000;
-    position:relative;
-    padding:20px 15px;
-
-    text-align:center;
-
-    border-bottom:2px solid #ff6b00;
-
-    box-shadow:0 3px 12px rgba(0,0,0,.45);
-
-}
-header img{
-
-    width:180px;
-
-    max-width:90%;
-
-    height:auto;
-
-    display:block;
-
-    margin:auto;
-
-}
 .container-fluid{
     padding:15px;
 }
@@ -444,35 +420,6 @@ footer{
     padding:6px 12px;
     font-size:13px;
     font-weight:700;
-}
-
-
-/* SAIR / USUÁRIO LOGADO */
-.btnSair{
-    position:absolute;
-    top:14px;
-    right:12px;
-    width:40px;
-    height:40px;
-    border:none;
-    border-radius:11px;
-    background:rgba(255,255,255,.12);
-    color:#fff;
-    font-size:19px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-}
-
-.usuarioLogado{
-    color:#bdbdbd;
-    font-size:11px;
-    margin-top:7px;
-    word-break:break-all;
-}
-
-.usuarioLogado:empty{
-    display:none;
 }
 
 

@@ -1,0 +1,458 @@
+/* ===============================
+   LAYOUT SIDEBAR + CONTEÚDO
+================================ */
+
+:root{
+    --laranja:#ff6b00;
+    --escuro:#0F172A;
+    --largura-lateral:250px;
+}
+
+body{
+    background:#f4f5f7;
+}
+
+.barraLateral{
+    background:var(--escuro);
+    color:#fff;
+    width:var(--largura-lateral);
+    display:flex;
+    flex-direction:column;
+}
+
+/* A partir de lg o offcanvas vira coluna fixa. */
+@media (min-width:992px){
+
+    .barraLateral{
+        position:fixed;
+        top:0;
+        left:0;
+        height:100vh;
+        z-index:1030;
+    }
+
+    .areaConteudo{
+        margin-left:var(--largura-lateral);
+    }
+
+}
+
+.topoLateral{
+    background:#000;
+    padding:18px 14px;
+    border-bottom:2px solid var(--laranja);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+}
+
+.topoLateral img{
+    width:150px;
+    max-width:70%;
+    height:auto;
+}
+
+.menuLateral{
+    list-style:none;
+    margin:0;
+    padding:14px 10px;
+    flex:1;
+    overflow-y:auto;
+}
+
+.itemMenu{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:13px 14px;
+    border-radius:12px;
+    color:#cbd2e0;
+    text-decoration:none;
+    font-size:15px;
+    font-weight:600;
+    margin-bottom:6px;
+}
+
+.itemMenu i{
+    font-size:19px;
+}
+
+.itemMenu:hover{
+    background:rgba(255,255,255,.08);
+    color:#fff;
+}
+
+.itemMenu.ativo{
+    background:var(--laranja);
+    color:#fff;
+}
+
+.rodapeLateral{
+    padding:14px;
+    border-top:1px solid rgba(255,255,255,.12);
+}
+
+.rodapeLateral .usuarioLogado{
+    color:#8b93a5;
+    font-size:12px;
+    margin-bottom:10px;
+    word-break:break-all;
+}
+
+.rodapeLateral .usuarioLogado:empty{
+    display:none;
+}
+
+.btnSairLateral{
+    width:100%;
+    border:none;
+    border-radius:11px;
+    height:44px;
+    background:rgba(255,255,255,.12);
+    color:#fff;
+    font-weight:bold;
+    font-size:14px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+}
+
+
+/* ===============================
+   BARRA SUPERIOR
+================================ */
+
+.barraTopo{
+    background:#000;
+    border-bottom:2px solid var(--laranja);
+    padding:14px 15px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    position:sticky;
+    top:0;
+    z-index:1020;
+}
+
+.barraTopo h1{
+    margin:0;
+    font-size:18px;
+    font-weight:bold;
+    color:#fff;
+}
+
+.btnMenu{
+    border:none;
+    background:rgba(255,255,255,.12);
+    color:#fff;
+    width:40px;
+    height:40px;
+    border-radius:11px;
+    font-size:20px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+
+/* ===============================
+   SEÇÕES
+================================ */
+
+.secaoConteudo{
+    display:none;
+}
+
+.secaoConteudo.ativa{
+    display:block;
+}
+
+.rodape{
+    text-align:center;
+    color:#777;
+    font-size:12px;
+    padding:18px 0 26px;
+}
+
+@media (min-width:992px){
+    .rodape{
+        margin-left:var(--largura-lateral);
+    }
+}
+
+
+/* ===============================
+   CABEÇALHO DO CRUD
+================================ */
+
+.cabecalhoCrud{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:16px;
+}
+
+.cabecalhoCrud h2{
+    margin:0;
+    font-size:19px;
+    font-weight:bold;
+    color:#111;
+}
+
+.cabecalhoCrud p{
+    margin:3px 0 0;
+    font-size:13px;
+    color:#777;
+}
+
+.acoesCrud{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+}
+
+.btnPrimario,
+.btnSecundario{
+    border:none;
+    border-radius:12px;
+    height:44px;
+    padding:0 16px;
+    font-weight:bold;
+    font-size:14px;
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+}
+
+.btnPrimario{
+    background:var(--laranja);
+    color:#fff;
+}
+
+.btnSecundario{
+    background:#e9ecef;
+    color:#333;
+}
+
+.btnPrimario:disabled,
+.btnSecundario:disabled{
+    opacity:.65;
+}
+
+
+/* ===============================
+   TABELA
+================================ */
+
+.caixaTabela{
+    background:#fff;
+    border-radius:16px;
+    padding:16px;
+    box-shadow:0 2px 10px rgba(0,0,0,.08);
+    /* A tabela rola sozinha; a página nunca rola na horizontal. */
+    overflow-x:auto;
+}
+
+#tabelaClientes thead th{
+    font-size:12px;
+    text-transform:uppercase;
+    color:#888;
+    border-bottom:2px solid #eee;
+}
+
+#tabelaClientes tbody td{
+    font-size:14px;
+    vertical-align:middle;
+}
+
+.colunaAcoes{
+    white-space:nowrap;
+}
+
+.btnTabela{
+    border:none;
+    border-radius:9px;
+    width:36px;
+    height:36px;
+    font-size:15px;
+    margin-right:5px;
+    background:#eef0f3;
+    color:#444;
+}
+
+.btnEditar:hover{
+    background:var(--laranja);
+    color:#fff;
+}
+
+.btnExcluir:hover{
+    background:#dc3545;
+    color:#fff;
+}
+
+.selo{
+    display:inline-block;
+    padding:4px 10px;
+    border-radius:20px;
+    font-size:12px;
+    font-weight:700;
+    white-space:nowrap;
+}
+
+.selo-com{ background:#d8f5e3; color:#136b38; }
+.selo-sem{ background:#fdf3cf; color:#7a5b06; }
+.selo-nao{ background:#ececef; color:#555; }
+
+
+/* ===============================
+   AVISOS DO CRUD
+================================ */
+
+.avisoClientes{
+    display:none;
+    margin-bottom:14px;
+    padding:11px 14px;
+    border-radius:11px;
+    font-size:13px;
+    font-weight:600;
+}
+
+.aviso-info{
+    background:#e7f1ff;
+    color:#0b4a8f;
+}
+
+.aviso-erro{
+    background:#fdecea;
+    color:#a12622;
+}
+
+.btnTentarNovamente{
+    border:none;
+    border-radius:8px;
+    background:#a12622;
+    color:#fff;
+    font-size:12px;
+    font-weight:700;
+    padding:5px 11px;
+    margin-left:8px;
+}
+
+
+/* ===============================
+   MODAL DE CLIENTE
+================================ */
+
+.modalClienteConteudo{
+    border:none;
+    border-radius:18px;
+}
+
+.campoCliente{
+    border-radius:12px;
+    /* 16px evita o zoom automático do iOS ao focar o campo */
+    font-size:16px;
+    height:50px;
+}
+
+.campoCliente:focus{
+    border-color:var(--laranja);
+    box-shadow:0 0 0 3px rgba(255,107,0,.14);
+}
+
+.campoCliente[readonly]{
+    background:#f1f1f3;
+    color:#777;
+}
+
+.margensCliente{
+    display:none;
+    margin-top:16px;
+    padding:11px 13px;
+    border-radius:11px;
+    background:#f4f5f7;
+    color:#444;
+    font-size:13px;
+    font-weight:600;
+}
+
+/* ===============================
+   UPLOAD DE IMPORTAÇÃO
+================================ */
+
+.ajudaImportacao{
+    font-size:13px;
+    color:#777;
+    margin:0 0 14px;
+}
+
+.areaUpload{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+    padding:26px 16px;
+    border:2px dashed #d3d6dc;
+    border-radius:14px;
+    background:#fafbfc;
+    cursor:pointer;
+    text-align:center;
+}
+
+.areaUpload:hover{
+    border-color:var(--laranja);
+    background:#fff7f1;
+}
+
+.areaUpload i{
+    font-size:30px;
+    color:var(--laranja);
+}
+
+.areaUpload strong{
+    font-size:15px;
+    color:#111;
+}
+
+.areaUpload span{
+    font-size:13px;
+    color:#777;
+    word-break:break-all;
+}
+
+/* O input real fica fora da tela; a label acima é o alvo do clique. */
+.entradaArquivo{
+    position:absolute;
+    left:-9999px;
+    width:1px;
+    height:1px;
+    opacity:0;
+}
+
+.selo-erro{ background:#fdecea; color:#a12622; }
+
+.colunaValor{
+    text-align:right;
+    white-space:nowrap;
+}
+
+.erroCliente{
+    display:none;
+    margin-top:14px;
+    padding:11px 13px;
+    border-radius:11px;
+    background:#fdecea;
+    color:#a12622;
+    font-size:13px;
+    font-weight:600;
+}
+
+
+/* O card do painel some do fluxo antigo do header original. */
+.dashboard{
+    margin-top:0;
+}

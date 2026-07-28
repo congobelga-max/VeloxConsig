@@ -20,13 +20,69 @@ Single-page mobile CRM for a Brazilian payroll-loan (consignado) brokerage. One 
 
 ### Login gate
 
-`login.php` posts `{email, password}` to `AUTH_CONFIG.API_LOGIN` with a static `Authorization: Bearer` header and stores the returned token. `index.php` calls `exigirAutenticacao()` in `<head>` (before any rendering) and redirects to the login page when there is no valid session. Removing those two `<script>` tags disables the gate entirely.
+`login.php` posts `{email, password}` to `AUTH_CONFIG.API_LOGIN` and stores the returned token. `index.php` calls `exigirAutenticacao()` in `<head>` (before any rendering) and redirects to the login page when there is no valid session. Removing those two `<script>` tags disables the gate entirely.
 
-Two things this is **not**: the bearer token in `assets/js/auth.js` is shipped to the browser and readable by anyone, so it is not a secret once deployed — replace `API_LOGIN` with a backend proxy if it ever needs to be. And the redirect is a client-side convenience, not access control: `localStorage` is editable and the page is static. Treat both as UI, not security.
+Credentials live in `AUTH_CONFIG` (`assets/js/auth.js`) — one place to edit. `montarCabecalhos()` in `login.js` always sends `x-api-key: <API_KEY>`, and adds `Authorization: Bearer <TOKEN_APP>` only when `TOKEN_APP` is non-empty and not the `YOUR_SECRET_TOKEN` placeholder — sending a placeholder would just earn a 401.
+
+`x-api-key` is a custom header, so the browser makes this a preflighted request: the API must answer the `OPTIONS` probe with `Access-Control-Allow-Origin` for the serving origin and `Access-Control-Allow-Headers: x-api-key, content-type, authorization`. A missing preflight response surfaces as a `TypeError` from `fetch`, indistinguishable from an offline device — hence the error copy naming both causes. `curl` never reveals this, since CORS is enforced only by browsers.
+
+Two things this is **not**: `API_KEY` is shipped to the browser and readable by anyone, so it is not a secret once deployed — keep it rotatable and scoped to the login endpoint, or move the call behind a backend proxy. And the redirect is a client-side convenience, not access control: `localStorage` is editable and the page is static. Treat both as UI, not security.
 
 Session keys (`auth_token`, `auth_usuario`, `auth_expira`, `auth_email_lembrado`) are namespaced away from the per-CPF keys on purpose — `limparSessao()` must never wipe the operator's `status_` / `contato_` / `classificacao_` work. Sessions expire after `HORAS_SESSAO` (12h) unless the API returns `expires_in`; a token with no stored expiry is treated as expired.
 
 The login response shape was never confirmed against the live API, so `extrairToken` / `extrairUsuario` / `extrairMensagem` in `assets/js/login.js` accept several common field spellings (`token`, `access_token`, `data.token`, Laravel-style `errors{}`). Once the real shape is known, collapse them to the actual path.
+
+### Three screens, one page
+
+`index.php` is a sidebar shell (`offcanvas-lg` — a drawer under 992px, a fixed column above) with sections toggled by `mostrarSecao()`:
+
+- **Painel** — the original card workflow: import, dashboard tiles, search, WhatsApp, proposal modal. Local only.
+- **Clientes** — a DataTables CRUD over `AUTH_CONFIG.API_CLIENTES`.
+- **Importações** — spreadsheet upload + history over `AUTH_CONFIG.API_IMPORTACOES`.
+
+Each table is built while hidden, so its section must call `columns.adjust().responsive.recalc()` on show or every column collapses to zero width. Both lists load lazily on first visit.
+
+**The three data sets are distinct and only flow one way.** `clientes` (Painel) ← spreadsheet or `sincronizarPainel()`; `clientesApi` ← server; `importacoes` ← server. `sincronizarPainel()` is the only bridge: it rewrites `clientes` from `clientesApi`, re-reading `status_`/`data_`/`hora_` per CPF so the operator's history survives — that history has never existed server-side. It drops records without a CPF, since they have no local key. Nothing flows Painel → server except by uploading a spreadsheet.
+
+### CRUD layer
+
+`assets/js/api.js` is transport only: `requisitarApi()` attaches `x-api-key` plus `Authorization: Bearer <session token>` from `obterToken()`, and turns failures into an `ErroApi` carrying `.status` (0 = network/CORS, since `fetch` cannot distinguish offline from a blocked preflight). A 401 clears the session and bounces to the login page — the server rejecting the token is the one case the local expiry check cannot catch.
+
+`assets/js/clientes-crud.js` holds the UI plus `mapearClienteDaApi` / `mapearClienteParaApi`. A client record looks like this:
+
+```json
+{"id":1,"key":"38d302de-…","cpf":"50181123878","nome":"…","celular":"11950824546",
+ "email":"…","margemDisponivel":220.16,"margemBruta":1732.06,
+ "createdAtUtc":"2026-07-25T01:03:00.394955Z","updatedAtUtc":"…"}
+```
+
+Three consequences worth knowing before touching this:
+
+- **The phone field is `celular`, not `telefone`** — the spreadsheet side uses `telefone`, so the two models differ by one name.
+- **There is no `status` on the server.** Status is local, `localStorage.status_<cpf>`, exactly as the Painel writes it. The table renders it read-only and re-reads it on every draw; it is never sent in a payload. `mapearClienteParaApi` emits exactly `{cpf, nome, celular, email}`.
+- **`margemDisponivel` / `margemBruta` come from the bank queries**, not the operator, so they are display-only. They *are* echoed back on update — if `PUT` replaces the whole resource, omitting them would zero real margins.
+
+The record shape is confirmed; the list *envelope* is not, so `extrairLista` still accepts `[…]`, `{data:[…]}`, `{clientes:[…]}` and paginated `{data:{data:[…]}}`.
+
+**Two server identifiers, and `id` ≠ `id`.** The API sends both an integer `id` and a GUID `key`. Routes use the integer via `identificadorUrl()` — one line to switch to `key` if the backend disagrees. Locally, `cliente.id` means something else entirely: the CPF digits, because every localStorage key hangs off it. The server's PK is `idApi`. Never merge the two.
+
+On save, the sent payload is the base and the API response overlays it — an API that replies with only `{id:1}` would otherwise blank out the row. If no id comes back at all, the list is reloaded so edit/delete keep a target.
+
+Currency and dates sort wrong if `render` returns formatted text for every type: return the raw number/ISO string for `sort`/`filter` and format only for `display`.
+
+### Uploads (`assets/js/importacoes.js`)
+
+`POST /importacoes-clientes` takes `multipart/form-data` with the file under the field name `arquivo`. **Never set `Content-Type` for it.** The `curl` recipe spells the header out because curl computes the boundary itself; in the browser, setting it by hand produces a body with no boundary and the server rejects the upload. `requisitarApi` takes `opcoes.formulario` (a `FormData`) precisely so it can skip that header — `opcoes.corpo` is the JSON path.
+
+A successful upload reloads both the import list and the client list, since the server creates clients as a side effect.
+
+Only the POST contract is confirmed. Listing and delete are assumed to follow REST convention on the same path; `carregarImportacoes()` treats 404/405 as "this API has no listing" and says so instead of showing an error. The record mapper accepts several field spellings for the same reason — collapse it once the shape is known.
+
+### Session lifetime
+
+The API's JWT carries `exp` about an hour out. `expiracaoDoToken()` decodes that claim and it takes precedence over the login response's `expires_in` and over `HORAS_SESSAO`. Without it the local session outlives the token and every action 401s until the operator works out that they need to log in again. Non-JWT tokens fall through to the older rules.
+
+DataTables `render` callbacks do no escaping of their own, so every one of them goes through `escaparHtml` / `escaparArgumento`.
 
 ### State model
 
