@@ -1,0 +1,178 @@
+.telaLogin{
+    margin:0;
+    min-height:100vh;
+    background:#0F172A;
+    font-family:Arial,Helvetica,sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:24px 16px;
+    box-sizing:border-box;
+}
+
+.cartaoLogin{
+    width:100%;
+    max-width:400px;
+    background:#fff;
+    border-radius:20px;
+    padding:28px 22px 26px;
+    box-shadow:0 10px 34px rgba(0,0,0,.45);
+    border-top:4px solid #ff6b00;
+    box-sizing:border-box;
+}
+
+.logoLogin{
+    background:#000;
+    border-radius:14px;
+    padding:16px;
+    margin-bottom:20px;
+    text-align:center;
+}
+
+.logoLogin img{
+    width:160px;
+    max-width:80%;
+    height:auto;
+    display:block;
+    margin:auto;
+}
+
+.tituloLogin{
+    margin:0 0 4px;
+    font-size:21px;
+    font-weight:bold;
+    color:#111;
+    text-align:center;
+}
+
+.subtituloLogin{
+    margin:0 0 22px;
+    font-size:13px;
+    color:#777;
+    text-align:center;
+}
+
+.rotuloCampo{
+    display:block;
+    font-size:11px;
+    color:#888;
+    text-transform:uppercase;
+    font-weight:bold;
+    margin-bottom:5px;
+}
+
+.campoLogin{
+    display:flex;
+    align-items:center;
+    background:#f7f7f8;
+    border:1px solid #e0e0e3;
+    border-radius:13px;
+    padding:0 12px;
+    height:54px;
+    margin-bottom:16px;
+    transition:.2s;
+}
+
+.campoLogin:focus-within{
+    border-color:#ff6b00;
+    background:#fff;
+    box-shadow:0 0 0 3px rgba(255,107,0,.14);
+}
+
+.campoLogin > i{
+    font-size:17px;
+    color:#999;
+    margin-right:10px;
+}
+
+.campoLogin input{
+    flex:1;
+    border:none;
+    outline:none;
+    background:transparent;
+    /* 16px evita o zoom automático do iOS ao focar o campo */
+    font-size:16px;
+    color:#111;
+    min-width:0;
+}
+
+.campoLogin.comErro{
+    border-color:#dc3545;
+    background:#fff;
+}
+
+.btnOlho{
+    border:none;
+    background:transparent;
+    color:#888;
+    font-size:17px;
+    padding:8px;
+    line-height:1;
+}
+
+.lembrarEmail{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:14px;
+    color:#555;
+    margin-bottom:18px;
+    cursor:pointer;
+}
+
+.lembrarEmail input{
+    width:18px;
+    height:18px;
+    accent-color:#ff6b00;
+    margin:0;
+}
+
+.erroLogin{
+    display:none;
+    margin-bottom:14px;
+    padding:11px 13px;
+    border-radius:11px;
+    background:#fdecea;
+    color:#a12622;
+    font-size:13px;
+    font-weight:600;
+    line-height:1.45;
+}
+
+.btnEntrar{
+    width:100%;
+    border:none;
+    border-radius:13px;
+    height:54px;
+    background:#ff6b00;
+    color:#fff;
+    font-size:17px;
+    font-weight:bold;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:9px;
+}
+
+.btnEntrar:disabled{
+    opacity:.65;
+}
+
+.carregandoBtn{
+    display:none;
+    width:18px;
+    height:18px;
+    border-width:2px;
+}
+
+.btnEntrar.carregando .carregandoBtn{
+    display:inline-block;
+}
+
+.rodapeLogin{
+    text-align:center;
+    color:#8b93a5;
+    font-size:12px;
+    margin-top:22px;
+}

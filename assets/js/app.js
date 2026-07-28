@@ -1195,6 +1195,20 @@ function enviarPropostaWhatsApp(){
 }
 
 // ===============================
+// IDENTIFICAÇÃO DO OPERADOR
+// ===============================
+
+const rotuloUsuario = document.getElementById("usuarioLogado");
+
+if(rotuloUsuario && typeof obterUsuario === "function"){
+
+    // textContent: o nome vem da API e não pode virar marcação.
+    rotuloUsuario.textContent = obterUsuario();
+
+}
+
+
+// ===============================
 // GARANTE ATUALIZAÇÃO DO DASHBOARD
 // ===============================
 

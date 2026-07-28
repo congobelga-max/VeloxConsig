@@ -18,6 +18,16 @@ Local assets are referenced relative to the document root of the app: `index.php
 
 Single-page mobile CRM for a Brazilian payroll-loan (consignado) brokerage. One operator imports a spreadsheet of leads, works each card, and messages clients over WhatsApp. There is no backend and no server-side state — everything is in `assets/js/app.js` (~1200 lines, all globals, no modules).
 
+### Login gate
+
+`login.php` posts `{email, password}` to `AUTH_CONFIG.API_LOGIN` with a static `Authorization: Bearer` header and stores the returned token. `index.php` calls `exigirAutenticacao()` in `<head>` (before any rendering) and redirects to the login page when there is no valid session. Removing those two `<script>` tags disables the gate entirely.
+
+Two things this is **not**: the bearer token in `assets/js/auth.js` is shipped to the browser and readable by anyone, so it is not a secret once deployed — replace `API_LOGIN` with a backend proxy if it ever needs to be. And the redirect is a client-side convenience, not access control: `localStorage` is editable and the page is static. Treat both as UI, not security.
+
+Session keys (`auth_token`, `auth_usuario`, `auth_expira`, `auth_email_lembrado`) are namespaced away from the per-CPF keys on purpose — `limparSessao()` must never wipe the operator's `status_` / `contato_` / `classificacao_` work. Sessions expire after `HORAS_SESSAO` (12h) unless the API returns `expires_in`; a token with no stored expiry is treated as expired.
+
+The login response shape was never confirmed against the live API, so `extrairToken` / `extrairUsuario` / `extrairMensagem` in `assets/js/login.js` accept several common field spellings (`token`, `access_token`, `data.token`, Laravel-style `errors{}`). Once the real shape is known, collapse them to the actual path.
+
 ### State model
 
 Three module-level globals drive everything: `clientes` (the working array), `filtroAtual`, `pesquisaAtual`. `renderizarCards()` rebuilds `#clientes` from scratch on every change; `atualizarDashboard()` recounts the five dashboard tiles. Nearly every mutation ends by calling both.

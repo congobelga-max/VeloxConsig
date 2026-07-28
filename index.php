@@ -20,6 +20,11 @@ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.m
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <link rel="stylesheet" href="assets/css/style.css">
+
+<!-- Trava de acesso: precisa rodar antes de qualquer renderização.
+     Para desativar o login, basta remover estas duas tags. -->
+<script src="assets/js/auth.js"></script>
+<script>exigirAutenticacao();</script>
 </head>
 
 <body>
@@ -31,7 +36,13 @@ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.m
     alt="VeloxConsig CRM"
     style="width:170px; max-width:90%; height:auto;"
     loading="eager">
-	
+
+<button type="button" class="btnSair" onclick="sair()" aria-label="Sair da conta">
+    <i class="bi bi-box-arrow-right"></i>
+</button>
+
+<div id="usuarioLogado" class="usuarioLogado"></div>
+
 </header>
 
 <div class="container-fluid">
