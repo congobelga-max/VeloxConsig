@@ -393,10 +393,7 @@ function atualizarDashboard(){
         if(c.status=="sem")
             sem++;
 
-        if(
-            c.status=="nao" &&
-            localStorage.getItem("contato_inicial_" + c.id)==="sim"
-        )
+        if(aguardandoResposta(c))
             aguardando++;
 
     });
@@ -434,7 +431,10 @@ function renderizarCards(){
 
 		if(filtroAtual=="sem" && cliente.status!="sem")
 		return;
-		
+
+		if(filtroAtual=="aguardando" && !aguardandoResposta(cliente))
+		return;
+
 		if(pesquisaAtual){
 
 			const termo = pesquisaAtual.toLowerCase();
@@ -481,7 +481,7 @@ function renderizarCards(){
     <div class="topo">
 
         <div class="nome">
-            ${cliente.nome}
+            ${escaparHtml(cliente.nome)}
         </div>
 
         <div class="status ${corStatus}"></div>
@@ -493,9 +493,9 @@ function renderizarCards(){
     </div>
 
     <div class="valor valorCopiavel"
-         onclick="copiarTexto('${cliente.cpf}', 'CPF')"
+         onclick="copiarTexto('${escaparArgumento(cliente.cpf)}', 'CPF')"
          title="Clique para copiar o CPF">
-        ${cliente.cpf}
+        ${escaparHtml(cliente.cpf)}
     </div>
 
     <div class="rotulo">
@@ -503,12 +503,12 @@ function renderizarCards(){
     </div>
 
     <div class="valor valorCopiavel"
-         onclick="copiarTexto('${cliente.telefone}', 'Telefone')"
+         onclick="copiarTexto('${escaparArgumento(cliente.telefone)}', 'Telefone')"
          title="Clique para copiar o telefone">
-        ${cliente.telefone}
+        ${escaparHtml(cliente.telefone)}
     </div>
 
-    ${cliente.status=="nao" && localStorage.getItem("contato_inicial_" + cliente.id)==="sim"
+    ${aguardandoResposta(cliente)
         ? `<div class="aguardandoRespostaCard">📲 Aguardando resposta</div>`
         : ""}
 
@@ -516,7 +516,7 @@ function renderizarCards(){
 
 	<button
 		class="btnZap"
-		onclick="abrirWhatsapp('${somenteNumeros(cliente.telefone)}', '${cliente.nome.replace(/'/g, "\\'")}', '${cliente.id}')">
+		onclick="abrirWhatsapp('${somenteNumeros(cliente.telefone)}', '${escaparArgumento(cliente.nome)}', '${cliente.id}')">
 
 		<i class="bi bi-whatsapp"></i>
 
@@ -849,6 +849,40 @@ function exportarPlanilha(){
 
 function somenteNumeros(texto){
     return String(texto || "").replace(/\D/g,"");
+}
+
+// Cliente que já recebeu o primeiro contato mas ainda não foi consultado.
+// Mesma regra usada pelo contador do dashboard e pelo filtro "aguardando".
+function aguardandoResposta(cliente){
+
+    return cliente.status === "nao" &&
+        localStorage.getItem("contato_inicial_" + cliente.id) === "sim";
+
+}
+
+// Os cards são montados como texto HTML, então todo valor vindo da planilha
+// precisa ser escapado — um nome como "D'Ávila" quebrava a marcação.
+function escaparHtml(texto){
+
+    return String(texto == null ? "" : texto)
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#39;");
+
+}
+
+// Valor que vai dentro de uma string JS entre aspas simples,
+// dentro de um atributo onclick: escapa para o JS e depois para o HTML.
+function escaparArgumento(texto){
+
+    return escaparHtml(
+        String(texto == null ? "" : texto)
+            .replace(/\\/g,"\\\\")
+            .replace(/'/g,"\\'")
+    );
+
 }
 
 function formatarTelefone(numero){

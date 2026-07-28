@@ -67,10 +67,18 @@ The cascade order is deliberate, since a single reply can match several patterns
 
 The line regexes are tightly coupled to the bot's exact format (`1 — Banco — 84x R$ 123,45 → R$ 6.789,00`). If the bot's output changes, these are what break. `valorBR` converts pt-BR decimals (`1.234,56`) for comparison; all display strings stay pt-BR formatted.
 
-### Known gaps
+### Escaping in card markup
 
-- `aplicarFiltro('aguardando')` highlights the tile but `renderizarCards()` has no matching branch, so the list is unfiltered.
-- Client names are interpolated into HTML strings unescaped; a name containing `'` or `<` corrupts the card markup (only `abrirWhatsapp`'s argument is quote-escaped).
+Cards are assembled as HTML strings, so anything coming from the spreadsheet must go through a helper — names like `D'Ávila` or `Sant'Ana` are common and used to corrupt the markup:
+
+- `escaparHtml(v)` for text content and plain attribute values.
+- `escaparArgumento(v)` for a value landing inside a single-quoted JS string within an `onclick` (escapes for JS first, then for HTML). The browser decodes the entities when parsing the attribute, so the handler receives the original value.
+
+`cliente.id` is exempt — it is `somenteNumeros(cpf)`, and rows without one are dropped at import, so it can only ever be digits.
+
+### Shared predicates
+
+`aguardandoResposta(cliente)` (status `nao` + `contato_inicial_<id>` set) backs the dashboard tile, the card badge, and `filtroAtual == "aguardando"` alike. Any new "which clients count as X" rule belongs in one function for the same reason — these three drifted apart before.
 
 ## Conventions
 
