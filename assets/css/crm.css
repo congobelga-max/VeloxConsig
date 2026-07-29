@@ -390,6 +390,19 @@ body{
     margin:0 0 14px;
 }
 
+.modeloCsv{
+    background:#0F172A;
+    color:#e6e9ef;
+    border-radius:10px;
+    padding:11px 13px;
+    font-size:12px;
+    line-height:1.6;
+    margin:0 0 14px;
+    /* Linha longa rola dentro do bloco; o modal nunca rola na horizontal. */
+    overflow-x:auto;
+    white-space:pre;
+}
+
 .areaUpload{
     display:flex;
     flex-direction:column;

@@ -27,7 +27,7 @@ function mapearClienteDaApi(registro){
     registro = registro || {};
 
     const cpf = registro.cpf || "";
-    const idLocal = somenteNumeros(cpf);
+    const idLocal = normalizarCpf(cpf);
 
     return {
 
@@ -58,7 +58,7 @@ function mapearClienteDaApi(registro){
 function mapearClienteParaApi(cliente){
 
     return {
-        cpf: somenteNumeros(cliente.cpf),
+        cpf: normalizarCpf(cliente.cpf),
         nome: cliente.nome,
         celular: somenteNumeros(cliente.celular),
         email: cliente.email
@@ -478,7 +478,7 @@ async function salvarCliente(){
 
     // CPF duplicado é rejeitado aqui para não depender da API ter a restrição.
     const duplicado = clientesApi.find(c =>
-        c.id === somenteNumeros(dados.cpf) &&
+        c.id === normalizarCpf(dados.cpf) &&
         String(c.idApi) !== String(idApi)
     );
 

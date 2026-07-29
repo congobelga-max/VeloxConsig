@@ -115,7 +115,35 @@ Import *replaces* `clientes` rather than appending. Per row, status resolves in 
 
 `data`/`hora` follow the same cascade, then are forcibly blanked when the final status is `nao`. Column names are matched by a hardcoded alias list (`NOME`/`Nome`/`CLIENTE`, `CPF`, `TELEFONE`/`CELULAR`, `Status`, `Data`, `Hora`) — new spreadsheet headers must be added there.
 
-CPFs lose leading zeros when Excel stores them as numbers. `copiarTexto` re-pads to 11 digits *on copy only*; the displayed and exported value stays as imported.
+CPFs lose leading zeros when Excel stores them as numbers. `copiarTexto` re-pads to 11 digits *on copy only*; the displayed and exported value stays as imported. This does not apply to the CSV path, which parses with `raw:true` and keeps every value as text.
+
+### CSV (`assets/js/csv.js`)
+
+The reference layout is `nome;telefone;cpf`. Two things about Brazilian CSV decide whether it parses at all, and SheetJS gets both wrong by default:
+
+- **Separator.** Excel in pt-BR writes `;`, SheetJS assumes `,`. `detectarSeparadorCsv()` counts candidates in the header line and the result is passed as `FS` to `XLSX.read`. Guessing from the header (not the whole file) matters — a name like `SILVA, JOSE` in the body would otherwise outvote the real separator.
+- **Encoding.** Excel writes windows-1252, not UTF-8. `decodificarTexto()` strips a BOM, tries strict UTF-8, and falls back to 1252 — read as UTF-8, `JOSÉ` comes out corrupted.
+
+`importarPlanilha` branches on `ehArquivoCsv()`: CSV goes through `lerWorkbookCsv` (text + `FS` + `raw:true`), everything else keeps the original binary path via `lerWorkbookBinario`. The old inline `reader.onload` body is now `processarPlanilha(workbook, entrada)`; both paths funnel into it.
+
+Header matching is accent- and case-insensitive against `ALIASES_COLUNAS`, so `CPF`, `cpf`, `Documento` are one column. The upload modal calls `analisarCabecalhoCsv()` on selection and refuses to send a CSV missing a required column — the server would only reject it after the round trip. `.xlsx` is not inspected client-side; its layout is the API's business.
+
+### CPF leading zeros are not cosmetic
+
+Excel stores CPF as a number and eats leading zeros. In the reference lead file, 33 of 100 CPFs arrived with 9 or 10 digits; padded back to 11, **all 100 pass the check-digit test**, so padding is provably the right reading and not a guess.
+
+`normalizarCpf()` pads anything under 11 digits and is the single entry point — `formatarCPF`, import, the API mapper and the duplicate check all go through it. Without it those 33 records get a 10-digit local key that can never match the server's 11-digit CPF, silently splitting one client into two.
+
+Because the key changes, `migrarHistoricoCpf()` runs during import: it moves `status_`/`data_`/`hora_`/`contato_*`/`classificacao_*` from the truncated key to the padded one, and a value already stored under the new key wins (it is the more recent one). Without this, fixing the zeros would look like the operator's history vanished.
+
+### Loading leads by path
+
+A browser cannot open `C:\VeloxConsig\leads\leads_crm_04.csv` by path — no page can read the disk by path, ever. The file must either be picked through the file input or published over HTTP. `LEADS_CONFIG` in `csv.js` points at `/leads/`, which needs an Apache alias (the snippet is in that file's header comment); `Require local` keeps it off the network.
+
+There is no button for this — the folder is tried automatically in both places, and both fall back silently to the file picker (`console.warn` only). A missing alias is a setup detail, not something to interrupt the operator over.
+
+- Painel **Importar** → `importarLeads()`: tries the folder, otherwise opens the picker.
+- Importações modal → `abrirModalImportacao()` fires `tentarArquivoDoServidor()` without awaiting, so the modal opens instantly and the file attaches when it arrives. It bails if the operator already picked something in the meantime.
 
 ### Telegram proposal parser (`gerarProposta`)
 

@@ -13,45 +13,127 @@ arquivo.addEventListener("change", importarPlanilha);
 // =========================
 
 
-function importarPlanilha(e){
+async function importarPlanilha(e){
 
     const file = e.target.files[0];
 
     if(!file) return;
 
-    const reader = new FileReader();
+    let workbook;
 
-    reader.onload = function(evt){
+    try{
 
-        let workbook;
+        workbook = ehArquivoCsv(file)
+            ? await lerWorkbookCsv(file)
+            : await lerWorkbookBinario(file);
 
-        try{
+    }catch(erro){
 
-            if(typeof evt.target.result === "string"){
+        alert("Não foi possível ler esta planilha.");
+        console.error(erro);
+        e.target.value = "";
+        return;
 
-                workbook = XLSX.read(evt.target.result,{
-                    type:"binary"
-                });
+    }
 
-            }else{
+    processarPlanilha(workbook, e.target);
 
-                workbook = XLSX.read(
-                    new Uint8Array(evt.target.result),
-                    {
-                        type:"array"
-                    }
+}
+
+
+// CSV precisa de tratamento próprio: o SheetJS assume vírgula como separador
+// e UTF-8 como codificação, e o Excel brasileiro usa ";" e windows-1252.
+// raw:true mantém tudo como texto — é o que preserva o zero à esquerda do CPF.
+async function lerWorkbookCsv(arquivo){
+
+    const texto = await lerArquivoComoTexto(arquivo);
+
+    return XLSX.read(texto,{
+        type:"string",
+        FS: detectarSeparadorCsv(texto),
+        raw:true
+    });
+
+}
+
+
+// Botão Importar: tenta primeiro a pasta de leads publicada e, se ela não
+// estiver acessível, abre o seletor de arquivos de sempre. Assim o operador
+// nunca fica sem caminho para importar, com ou sem o Alias configurado.
+async function importarLeads(){
+
+    const botao = document.getElementById("btnImportar");
+
+    if(botao) botao.disabled = true;
+
+    try{
+
+        const arquivo = await baixarArquivoLeads();
+
+        const workbook = XLSX.read(arquivo.texto,{
+            type:"string",
+            FS: detectarSeparadorCsv(arquivo.texto),
+            raw:true
+        });
+
+        processarPlanilha(workbook, null);
+
+        alert(clientes.length + " leads carregados de " + arquivo.nome + ".");
+
+    }catch(erro){
+
+        // Pasta não publicada, arquivo ausente ou ilegível: o operador escolhe.
+        console.warn("Pasta de leads indisponível, abrindo o seletor:", erro.message);
+
+        document.getElementById("arquivo").click();
+
+    }finally{
+
+        if(botao) botao.disabled = false;
+
+    }
+
+}
+
+
+function lerWorkbookBinario(arquivo){
+
+    return new Promise((resolver, rejeitar)=>{
+
+        const leitor = new FileReader();
+
+        leitor.onload = function(evt){
+
+            try{
+
+                resolver(
+                    typeof evt.target.result === "string"
+                        ? XLSX.read(evt.target.result,{type:"binary"})
+                        : XLSX.read(new Uint8Array(evt.target.result),{type:"array"})
                 );
+
+            }catch(erro){
+
+                rejeitar(erro);
 
             }
 
-        }catch(erro){
+        };
 
-            alert("Não foi possível ler esta planilha.");
-            console.error(erro);
-            e.target.value = "";
-            return;
+        leitor.onerror = () => rejeitar(leitor.error);
 
+        if(leitor.readAsBinaryString){
+            leitor.readAsBinaryString(arquivo);
+        }else{
+            leitor.readAsArrayBuffer(arquivo);
         }
+
+    });
+
+}
+
+
+function processarPlanilha(workbook, entrada){
 
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
@@ -118,9 +200,12 @@ function importarPlanilha(e){
                 "";
 
 
-            const id = somenteNumeros(cpf);
+            const id = normalizarCpf(cpf);
 
             if(!id) return;
+
+            // Chave usada antes de os zeros passarem a ser repostos.
+            migrarHistoricoCpf(somenteNumeros(cpf), id);
 
 
             // ==========================================
@@ -349,20 +434,7 @@ function importarPlanilha(e){
 
         atualizarDashboard();
 
-        e.target.value = "";
-
-    };
-
-
-    if(reader.readAsBinaryString){
-
-        reader.readAsBinaryString(file);
-
-    }else{
-
-        reader.readAsArrayBuffer(file);
-
-    }
+        if(entrada) entrada.value = "";
 
 }
 
@@ -911,9 +983,53 @@ function formatarTelefone(numero){
 
 }
 
+// O Excel guarda CPF como número e come os zeros à esquerda: 06590088403 sai
+// da planilha como 6590088403. Sem repor, a chave local fica com 10 dígitos e
+// nunca casa com o CPF de 11 do servidor nem com o histórico do operador.
+function normalizarCpf(valor){
+
+    const digitos = somenteNumeros(valor);
+
+    return digitos && digitos.length < 11
+        ? digitos.padStart(11,"0")
+        : digitos;
+
+}
+
+
+// Importações anteriores gravaram o histórico sob o CPF truncado.
+// Repor os zeros sem migrar faria o trabalho já registrado desaparecer.
+function migrarHistoricoCpf(idAntigo, idNovo){
+
+    if(!idAntigo || idAntigo === idNovo) return;
+
+    const prefixos = [
+        "status_", "data_", "hora_",
+        "contato_inicial_", "contato_data_", "contato_hora_",
+        "classificacao_", "classificacao_texto_"
+    ];
+
+    prefixos.forEach(prefixo=>{
+
+        const valor = localStorage.getItem(prefixo + idAntigo);
+
+        if(valor === null) return;
+
+        // O registro sob a chave nova tem precedência: é o mais recente.
+        if(localStorage.getItem(prefixo + idNovo) === null){
+            localStorage.setItem(prefixo + idNovo, valor);
+        }
+
+        localStorage.removeItem(prefixo + idAntigo);
+
+    });
+
+}
+
+
 function formatarCPF(cpf){
 
-    cpf = somenteNumeros(cpf);
+    cpf = normalizarCpf(cpf);
 
     if(cpf.length!=11)
         return cpf;

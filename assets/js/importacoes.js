@@ -7,6 +7,7 @@ let importacoes = [];
 let tabelaImportacoes = null;
 let tabelaImportacoesIniciada = false;
 let arquivoImportacao = null;
+let analiseImportacao = null;
 
 
 // ===============================
@@ -284,6 +285,7 @@ function mostrarAvisoImportacoes(texto, tipo, comBotao){
 function abrirModalImportacao(){
 
     arquivoImportacao = null;
+    analiseImportacao = null;
 
     document.getElementById("arquivoImportacao").value = "";
     document.getElementById("nomeArquivoEscolhido").textContent = "Nenhum arquivo selecionado";
@@ -294,19 +296,114 @@ function abrirModalImportacao(){
         .getOrCreateInstance(document.getElementById("modalImportacao"))
         .show();
 
+    // Sem await: o modal abre na hora e o arquivo da pasta é anexado se vier.
+    tentarArquivoDoServidor();
+
 }
 
 
-function selecionarArquivoImportacao(evento){
+async function selecionarArquivoImportacao(evento){
 
     arquivoImportacao = evento.target.files[0] || null;
+    analiseImportacao = null;
 
-    document.getElementById("nomeArquivoEscolhido").textContent =
-        arquivoImportacao
-            ? arquivoImportacao.name
-            : "Nenhum arquivo selecionado";
+    const rotulo = document.getElementById("nomeArquivoEscolhido");
 
     limparErroImportacao();
+
+    if(!arquivoImportacao){
+        rotulo.textContent = "Nenhum arquivo selecionado";
+        return;
+    }
+
+    rotulo.textContent = arquivoImportacao.name;
+
+    // Só o CSV é conferido aqui: o layout de .xlsx é validado pela API.
+    if(!ehArquivoCsv(arquivoImportacao)) return;
+
+    try{
+
+        const texto = await lerArquivoComoTexto(arquivoImportacao);
+
+        analiseImportacao = analisarCabecalhoCsv(texto);
+
+        if(analiseImportacao.faltando.length){
+
+            // Barrar aqui evita uma subida que já se sabe que vai falhar.
+            mostrarErroImportacao(
+                "O CSV precisa das colunas " + COLUNAS_OBRIGATORIAS.join("; ") + ". " +
+                "Não encontrei: " + analiseImportacao.faltando.join(", ") + "."
+            );
+
+            return;
+
+        }
+
+        if(!analiseImportacao.linhas){
+
+            mostrarErroImportacao("O arquivo tem cabeçalho, mas nenhuma linha de cliente.");
+            return;
+
+        }
+
+        rotulo.textContent =
+            arquivoImportacao.name + " · " +
+            analiseImportacao.linhas + " linha" + (analiseImportacao.linhas === 1 ? "" : "s") +
+            ' · separador "' + analiseImportacao.separador + '"';
+
+    }catch(erro){
+
+        mostrarErroImportacao("Não foi possível ler este arquivo.");
+        console.error("Falha ao analisar o CSV:", erro);
+
+    }
+
+}
+
+
+// Ao abrir o modal, tenta trazer o CSV da pasta publicada e já o deixa pronto
+// para envio, como se o operador o tivesse escolhido no seletor. Se a pasta não
+// estiver acessível, o modal segue normal e ele escolhe o arquivo à mão.
+async function tentarArquivoDoServidor(){
+
+    const rotulo = document.getElementById("nomeArquivoEscolhido");
+
+    try{
+
+        const baixado = await baixarArquivoLeads();
+
+        // O operador pode ter escolhido um arquivo enquanto a busca corria.
+        if(arquivoImportacao) return;
+
+        arquivoImportacao = new File([baixado.buffer], baixado.nome,{
+            type:"text/csv"
+        });
+
+        analiseImportacao = analisarCabecalhoCsv(baixado.texto);
+
+        if(analiseImportacao.faltando.length){
+
+            mostrarErroImportacao(
+                "O CSV do servidor não tem as colunas " +
+                analiseImportacao.faltando.join(", ") + "."
+            );
+
+            rotulo.textContent = baixado.nome;
+            return;
+
+        }
+
+        rotulo.textContent =
+            baixado.nome + " · " +
+            analiseImportacao.linhas + " linha" + (analiseImportacao.linhas === 1 ? "" : "s") +
+            ' · separador "' + analiseImportacao.separador + '"';
+
+    }catch(erro){
+
+        // Pasta não publicada: nada a avisar, o seletor continua disponível.
+        console.warn("Pasta de leads indisponível:", erro.message);
+
+    }
 
 }
 
@@ -348,6 +445,17 @@ async function enviarImportacao(){
     if(!arquivoImportacao){
         mostrarErroImportacao("Escolha um arquivo para enviar.");
         return;
+    }
+
+    if(analiseImportacao && analiseImportacao.faltando.length){
+
+        mostrarErroImportacao(
+            "Corrija o cabeçalho do CSV antes de enviar. Faltam: " +
+            analiseImportacao.faltando.join(", ") + "."
+        );
+
+        return;
+
     }
 
     enviandoImportacao(true);

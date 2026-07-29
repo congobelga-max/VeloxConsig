@@ -154,8 +154,9 @@
 
                 <button
                     type="button"
+                    id="btnImportar"
                     class="btnImportar"
-                    onclick="document.getElementById('arquivo').click()">
+                    onclick="importarLeads()">
                     <i class="bi bi-upload"></i>
                     Importar
                 </button>
@@ -353,6 +354,9 @@
      Envie a planilha de clientes (.xlsx, .xls ou .csv). O processamento é feito pela API.
     </p>
 
+    <pre class="modeloCsv">nome;telefone;cpf
+JOSE DA SILVA;11912345678;50181123878</pre>
+
     <label for="arquivoImportacao" class="areaUpload">
      <i class="bi bi-cloud-arrow-up"></i>
      <strong>Escolher arquivo</strong>
@@ -420,6 +424,7 @@
 <script src="https://cdn.datatables.net/responsive/3.0.3/js/responsive.bootstrap5.min.js"></script>
 
 <script src="assets/js/api.js"></script>
+<script src="assets/js/csv.js"></script>
 <script src="assets/js/app.js"></script>
 <script src="assets/js/clientes-crud.js"></script>
 <script src="assets/js/importacoes.js"></script>
