@@ -36,13 +36,29 @@ The login response shape was never confirmed against the live API, so `extrairTo
 
 `index.php` is a sidebar shell (`offcanvas-lg` — a drawer under 992px, a fixed column above) with sections toggled by `mostrarSecao()`:
 
-- **Painel** — the original card workflow: import, dashboard tiles, search, WhatsApp, proposal modal. Local only.
+- **Painel** (`assets/js/painel.js`) — the operator's work queue: a DataTable over `AUTH_CONFIG.API_CLIENTES`, WhatsApp and proposal modal.
 - **Clientes** — a DataTables CRUD over `AUTH_CONFIG.API_CLIENTES`.
 - **Importações** — spreadsheet upload + history over `AUTH_CONFIG.API_IMPORTACOES`.
 
-Each table is built while hidden, so its section must call `columns.adjust().responsive.recalc()` on show or every column collapses to zero width. Both lists load lazily on first visit.
+Each table is built while hidden, so its section must call `columns.adjust().responsive.recalc()` on show or every column collapses to zero width. Clientes and Importações load lazily on first visit; the Painel loads with the page, since it is the section shown on entry.
 
-**The three data sets are distinct and only flow one way.** `clientes` (Painel) ← spreadsheet or `sincronizarPainel()`; `clientesApi` ← server; `importacoes` ← server. `sincronizarPainel()` is the only bridge: it rewrites `clientes` from `clientesApi`, re-reading `status_`/`data_`/`hora_` per CPF so the operator's history survives — that history has never existed server-side. It drops records without a CPF, since they have no local key. Nothing flows Painel → server except by uploading a spreadsheet.
+**The three data sets are distinct.** `painelClientes` ← server (filtered); `clientesApi` ← server; `importacoes` ← server. `carregarPainel()` also assigns the global `clientes`, because `abrirModalProposta` / `enviarPropostaWhatsApp` in `app.js` look the record up there. `sincronizarPainel()` is now just "reload the Painel and go to it". Nothing flows Painel → server except by uploading a spreadsheet.
+
+### Painel (`assets/js/painel.js`)
+
+Two visible columns — **Nome** and **Data de criação** (`createdAtUtc`, newest first). Everything else lives in the Responsive child row: celular, CPF, offer count, and the **WhatsApp** / **Montar proposta** buttons. Those columns carry `className:"none"`, which keeps them out of the grid at *every* width — the child row is not a small-screen fallback here, it is where the detail is meant to be. The ⊕ toggle is column 0 (`className:"dtr-control"` + `responsive.details.type:"column"`).
+
+**Two views over one table.** The Tabela/Cards toggle does not build a second data set: `renderizarCardsPainel()` reads `rows({page:"current", search:"applied", order:"applied"})`, so the cards are the DataTable's current page rendered differently and cannot drift from it. The `#cardsPainel` container is moved *into* the DataTables layout next to the `<table>` on init, and `.emCards` hides `table.dataTable` only — the wrapper stays, so the search box, page-length selector and paginator keep working in card mode. Both views share `valorComCopia()` and `botoesAcao()` for the same reason. Cards are re-rendered from the `draw` event and skipped entirely while the table view is active.
+
+The copy buttons next to celular and CPF call `copiarTexto()` from `app.js`, which strips to digits and re-pads the CPF to 11 — that padding exists only on copy, so what is displayed and what lands on the clipboard differ by design for CPFs that lost leading zeros. `valorComCopia()` returns the whole `.linhaCampo` wrapper (value + button) rather than the two pieces loose, because that flex row is what pins the button to the right edge — in the child row the wrapper only spans the full width thanks to `flex:1` on `.dtr-data`.
+
+**The Painel does not carry status.** It was there briefly and was taken out: no chips, and `mapearClientePainel` no longer reads `status_`/`data_`/`hora_`. Nothing in the app writes those keys now except a local spreadsheet import, so the read-only Status column in **Clientes** shows only history from before this change.
+
+Two entry rules, both required: **`ofertas > 0`** and a dialable **celular** (≥ 10 digits). `quantidadeOfertas()` accepts a count or an array under several spellings (`ofertas`, `qtdOfertas`, `totalOfertas`, …) because the field name was never confirmed in the `/clientes` payload — collapse it once the real name is known. A record with none of them counts as zero offers and stays out; there is deliberately **no fallback to `margemDisponivel`**, which would silently widen the list beyond what was asked for.
+
+The date filter (Hoje / Ontem / a specific date) compares `chaveDoDia()` strings, not `Date` objects: `createdAtUtc` arrives in UTC and `<input type="date">` yields a local day, so both are reduced to a local `AAAA-MM-DD` key first. Parsing the picker value with `new Date("2026-07-30")` would read it as UTC and land on the previous day for anyone west of Greenwich — `formatarDiaBR()` splits the string instead. Filtering is done in plain JS and the rows are re-added; no `DataTable.ext.search` hook, which is global and would also reach the other two tables. A record with no `createdAtUtc` matches no day and is only visible under **Todos**.
+
+The card/import/export code in `app.js` (`renderizarCards`, `atualizarDashboard`, `importarPlanilha`, `exportarPlanilha`, `aplicarFiltro`) is no longer reachable from the UI — its markup left `index.php`. It was kept because the proposal pipeline, `abrirWhatsapp` and `alterarStatus` sit in the same file, and every function that touched the removed DOM now checks the element first and no-ops. `alterarStatus` still ends by calling `renderizarCards()`, `atualizarDashboard()` and `irParaProximoCliente()`; all three find nothing to do and return, which is why the Painel redraws its own rows afterwards.
 
 ### CRUD layer
 
@@ -140,10 +156,49 @@ Because the key changes, `migrarHistoricoCpf()` runs during import: it moves `st
 
 A browser cannot open `C:\VeloxConsig\leads\leads_crm_04.csv` by path — no page can read the disk by path, ever. The file must either be picked through the file input or published over HTTP. `LEADS_CONFIG` in `csv.js` points at `/leads/`, which needs an Apache alias (the snippet is in that file's header comment); `Require local` keeps it off the network.
 
-There is no button for this — the folder is tried automatically in both places, and both fall back silently to the file picker (`console.warn` only). A missing alias is a setup detail, not something to interrupt the operator over.
+There is no button for this — the folder is tried automatically, falling back silently to the file picker (`console.warn` only). A missing alias is a setup detail, not something to interrupt the operator over.
 
-- Painel **Importar** → `importarLeads()`: tries the folder, otherwise opens the picker.
 - Importações modal → `abrirModalImportacao()` fires `tentarArquivoDoServidor()` without awaiting, so the modal opens instantly and the file attaches when it arrives. It bails if the operator already picked something in the meantime.
+- `importarLeads()` in `app.js` did the same for the old Painel **Importar** button. That button is gone with the card layout, so this path is now unreachable.
+
+### Offer simulation (`assets/js/simulacao.js`)
+
+**Montar proposta** no longer just opens the modal: `montarProposta()` opens it and immediately queries OpenCredit for the client's CPF. Two calls, both confirmed against the live API — `POST /api/auth/login` with `{email, password}`, whose token is at **`data.accessToken`**, then `POST /api/tenants/<tenant>/integration/simulate` with `{cpf}` and `Authorization: Bearer`.
+
+**The password ships to the browser.** It is in `SIMULACAO_CONFIG` in a file anyone can read from DevTools, so it is not a secret after deploy — whoever opens the page can authenticate as that account. The fix is a backend proxy holding the credential and exposing only the simulate route; until then treat it as rotatable and compromised, exactly like `API_KEY` in `auth.js`.
+
+CORS was verified for `http://localhost`: the preflight reflects back whatever `Access-Control-Request-Headers` asks for, so `authorization` passes. A different serving origin has to be allowed by that API or every call fails as a `TypeError`, indistinguishable from being offline.
+
+The token is kept **in memory only** — not `localStorage`, which holds the CRM's own session for a different service. Its validity is not tracked: it is reused until the server answers 401, which re-logs in and repeats the call exactly once.
+
+Reading the response: **the bank name never reaches any output**, per the requirement. `opcoesDaSimulacao()` therefore returns one block *per bank that has offers* — each becomes an **"Opção N"** in the message, ordered best-`liquidAmount`-first, and that grouping is what lets two banks both offering 36x show up as distinct choices instead of two identical anonymous lines. (An earlier version flattened everything and deduplicated by `installments` for the same reason; the grouping replaced it and no longer throws the weaker bank's terms away.)
+
+The text comes from `montarMensagemOfertas()` in `app.js`, shared with the Telegram path so the client sees the same wording either way — it takes blocks, and the Telegram side passes a single one. The `Opção N` header is printed **only when there is more than one block**: with one bank it separates nothing and the message stays exactly as it was. `MENSAGEM_SEM_OFERTA` is shared for the same reason.
+
+When there are no offers, the reasons from the refused banks (plus `barriers`) go to the modal's `#avisoProposta` for the operator — reasons only, still no bank names. On any failure the Telegram paste-and-parse path is left intact as the fallback, and the error copy says so.
+
+One interaction this created: `colarTelegramAutomaticamente()` used to auto-run `gerarProposta()` after pasting, which would silently overwrite the message the API had just written the moment the operator touched the Telegram field. It now only auto-generates when `#mensagemProposta` is still empty; the button remains for doing it on purpose.
+
+### Contract wizard (`assets/js/contrato.js`)
+
+**Gerar contrato** opens a four-step modal; no step advances until it is valid. Every route below was confirmed against the live API, and they all go through `chamarOpenCredit()` in `simulacao.js` (one token, 401 → re-login → retry once).
+
+1. **Oferta** — the offer list, rendered as radio buttons grouped into "Opção N", still without bank names, with **Copiar** / **Enviar no WhatsApp** beside them (same text and same helpers as the proposal screen). The list comes from `obterSimulacao()`, which keeps one simulation **per CPF in memory**: `POST /simulate` is the slowest call in the flow and both screens ask for the same thing, so opening the wizard right after a proposal reuses that list instead of querying again. The panel says when it is reusing and offers **Consultar novamente**, which forces a fresh call — and clears the current selection first, since a new query can hand back different ids. Creating a contract drops the CPF from the cache. Exactly one must be picked; advancing sends `POST /simulate/:simulationId/select` with `{offerId}` and only moves on if that succeeds. Changing the pick clears `contratoSelecaoConfirmada`, so the select is re-sent — otherwise the API would hold an offer the operator has since changed.
+2. **Cadastro** — `GET /clients?cpf=` and `GET /clients/validate?cpf=&stage=propose`, fired together with `Promise.all`. **Only the restricted fields are shown**: `pendingFields` become required inputs validated against **the `regex` the API ships with each field**, and the rest of the record — already correct on the server — is not repeated on screen. Restrictions go in the form header: `validate.reason`, the `barriers` from `/clients`, and the count of blank fields. Advancing sends `PATCH /clients/:cpf` with those values, then re-runs `validate` and only moves on if the API stops reporting pendências; if it doesn't, the form re-renders with whatever is left.
+3. **Banco** — pick an account from `client.bankAccounts` or fill the form. Advancing **creates the account** with `POST /clients/:cpf/bank-accounts` and keeps the returned id; nothing else happens here.
+4. **Contrato** — a read-only summary of steps 1–3 plus an editable WhatsApp message, and `POST /proposals` with **`{simulationId, bankAccountId}`**. No `offerId`: step 1's `/select` already pinned the offer to that simulation, and the confirmed body does not carry it. The reply's `signUrl` is then sent to the client automatically.
+
+**The account has to exist before the proposal**, which is why it gets its own step. The body is `{banco, agencia, conta, contaDigito, tipoConta, operationType, apelido}`, where `banco` is a name ("Itaú") and not a code, `tipoConta` is `CC|CP` and `operationType` is `Pix|Ted|TitularidadeEmpregador`. The API demands only `banco`, `conta` and `tipoConta`; blank optional fields are left out of the body rather than sent empty. That route has no `GET`, which is why existing accounts are read from `client.bankAccounts` in the `/clients` payload.
+
+The id of a freshly created account is kept in `contratoContaCriada`. Without it, going back to step 3 and forward again — or retrying after a failure — would register a **second** identical bank account on the client.
+
+The step-4 message is built by `mensagemResumoContrato()` and **rewritten after the proposal is created** so it carries the `signUrl`: before generating it asks the client to confirm, after generating it is the signature link. `enviarAssinaturaAoCliente()` then opens WhatsApp with it on its own. That `window.open` runs *after* the `await` on the POST, outside the click gesture, so a pop-up blocker can swallow it — `abrirWhatsappComTexto()` returns the window handle for exactly this reason, and a null one turns the confirmation into an instruction to press the WhatsApp button manually. The contract is created either way; only the sending is at risk. The footer's Copiar/WhatsApp pair is shared with step 1 — `textoParaEnvioContrato()` picks the offer list or this message by step, so two buttons serve both, and they stay visible after the contract is created because that is how the link reaches the client.
+
+What remains unconfirmed in step 3: the **field the creation route returns the id under**. Testing it would write a real bank account onto a real client, so `idDaContaCriada()` accepts the likely spellings and, finding none, stops with a clear message instead of sending the proposal without an account.
+
+The write route is `PATCH /clients/:cpf` — **with the CPF in the path**; `PATCH /clients` alone is a 404, which is what made it look like there was no write route at all. Sending an unknown key makes it answer with the full whitelist, which is how the accepted names were established: `nome, nome_mae, celular, email, data_nascimento, endereco_cep, endereco_rua, endereco_numero, endereco_complemento, endereco_bairro, endereco_cidade, endereco_uf, estado_civil, rg, orgao_emissor, uf_emissor, data_expedicao, genero`. They are snake_case and match `pendingFields[].field` exactly, so the field name from the validation response is sent back verbatim — no translation table to drift.
+
+`ocupadoContrato(false)` re-runs `validarCadastroContrato()` instead of blindly enabling **Avançar** — the load of step 2 finishes *after* the render that disabled the button, and would otherwise hand back a working button over an incomplete form.
 
 ### Telegram proposal parser (`gerarProposta`)
 

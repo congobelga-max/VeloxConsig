@@ -6,6 +6,12 @@
     --laranja:#ff6b00;
     --escuro:#0F172A;
     --largura-lateral:250px;
+
+    /* O topo da sidebar e a barra superior encostam um no outro e dividem a
+       mesma linha laranja. Se cada um se dimensionar pelo próprio conteúdo
+       (texto de 17px de um lado, h1 de 18px e botão de 40px do outro), a linha
+       sai em degrau — daí a altura vir de um valor só, e não do padding. */
+    --altura-topo:62px;
 }
 
 body{
@@ -39,7 +45,10 @@ body{
 
 .topoLateral{
     background:#000;
-    padding:18px 14px;
+    height:var(--altura-topo);
+    /* A sidebar é uma coluna flex: sem isto a faixa encolhe quando o menu cresce. */
+    flex-shrink:0;
+    padding:0 14px;
     border-bottom:2px solid var(--laranja);
     display:flex;
     align-items:center;
@@ -47,10 +56,13 @@ body{
     gap:10px;
 }
 
-.topoLateral img{
-    width:150px;
-    max-width:70%;
-    height:auto;
+/* Sem a logo, o nome sustenta a faixa do topo — ela ficaria vazia no desktop,
+   onde o botão de fechar não aparece. */
+.marcaLateral{
+    color:#fff;
+    font-size:17px;
+    font-weight:bold;
+    letter-spacing:.4px;
 }
 
 .menuLateral{
@@ -126,8 +138,9 @@ body{
 
 .barraTopo{
     background:#000;
+    height:var(--altura-topo);
     border-bottom:2px solid var(--laranja);
-    padding:14px 15px;
+    padding:0 15px;
     display:flex;
     align-items:center;
     gap:12px;
@@ -257,14 +270,16 @@ body{
     overflow-x:auto;
 }
 
-#tabelaClientes thead th{
+#tabelaClientes thead th,
+#tabelaPainel thead th{
     font-size:12px;
     text-transform:uppercase;
     color:#888;
     border-bottom:2px solid #eee;
 }
 
-#tabelaClientes tbody td{
+#tabelaClientes tbody td,
+#tabelaPainel tbody td{
     font-size:14px;
     vertical-align:middle;
 }
@@ -468,4 +483,614 @@ body{
 /* O card do painel some do fluxo antigo do header original. */
 .dashboard{
     margin-top:0;
+}
+
+
+/* ===============================
+   FILTROS DE DATA DO PAINEL
+================================ */
+
+.filtrosPainel{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:8px;
+    margin-bottom:14px;
+}
+
+.chipFiltro{
+    border:none;
+    border-radius:20px;
+    height:40px;
+    padding:0 18px;
+    font-size:13px;
+    font-weight:700;
+    background:#e9ecef;
+    color:#444;
+}
+
+.chipFiltro.ativo{
+    background:var(--laranja);
+    color:#fff;
+}
+
+.campoDataPainel{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    height:40px;
+    padding:0 14px;
+    border:1px solid #dfe2e7;
+    border-radius:20px;
+    background:#fff;
+    margin:0;
+}
+
+.campoDataPainel.ativo{
+    border-color:var(--laranja);
+    box-shadow:0 0 0 3px rgba(255,107,0,.14);
+}
+
+.campoDataPainel i{
+    color:var(--laranja);
+    font-size:16px;
+}
+
+.campoDataPainel input{
+    border:none;
+    outline:none;
+    background:transparent;
+    font-weight:600;
+    color:#333;
+    /* 16px evita o zoom automático do iOS ao focar o campo */
+    font-size:16px;
+    max-width:140px;
+}
+
+
+/* ===============================
+   AÇÕES DENTRO DO DETALHE DA LINHA
+================================ */
+
+.btnLinha{
+    border:none;
+    border-radius:11px;
+    height:40px;
+    padding:0 15px;
+    font-size:13px;
+    font-weight:700;
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    margin:4px 8px 4px 0;
+    color:#fff;
+}
+
+.btnLinhaZap{
+    background:#25D366;
+}
+
+.btnLinhaProposta{
+    background:var(--laranja);
+}
+
+.btnLinhaContrato{
+    background:var(--escuro);
+}
+
+.btnLinhaCopiar{
+    background:#e9ecef;
+    color:#222;
+}
+
+/* Fica no rodapé do modal, à esquerda: o auto empurra Voltar/Avançar para a
+   ponta direita. O display é controlado pelo JS — some fora da etapa 1. */
+.acoesOfertaContrato{
+    display:none;
+    flex-wrap:wrap;
+    gap:8px;
+    margin:0 auto 0 0;
+}
+
+.acoesOfertaContrato .btnLinha{
+    margin:0;
+    height:44px;
+}
+
+
+/* ===============================
+   ASSISTENTE DE CONTRATO
+================================ */
+
+.passosContrato{
+    display:flex;
+    gap:8px;
+    padding:12px 16px;
+    border-bottom:1px solid #eceef1;
+    background:#fafbfc;
+}
+
+.passoContrato{
+    flex:1;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:13px;
+    font-weight:700;
+    color:#9aa1ad;
+}
+
+.passoContrato span{
+    width:26px;
+    height:26px;
+    border-radius:50%;
+    background:#e4e7eb;
+    color:#6b7280;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size:13px;
+    flex-shrink:0;
+}
+
+.passoContrato.ativo{
+    color:var(--escuro);
+}
+
+.passoContrato.ativo span{
+    background:var(--laranja);
+    color:#fff;
+}
+
+.passoContrato.concluido span{
+    background:#136b38;
+    color:#fff;
+}
+
+.avisoContrato{
+    display:none;
+    margin-bottom:14px;
+    padding:11px 14px;
+    border-radius:11px;
+    font-size:13px;
+    font-weight:600;
+}
+
+.carregandoContrato,
+.erroContrato{
+    padding:22px;
+    text-align:center;
+    font-weight:600;
+    color:#888;
+}
+
+.erroContrato{
+    color:#a12622;
+    background:#fdecea;
+    border-radius:12px;
+}
+
+.blocoOpcao{
+    border:1px solid #eceef1;
+    border-radius:14px;
+    padding:12px 14px;
+    margin-bottom:12px;
+}
+
+.origemOfertas{
+    font-size:12px;
+    color:#8b93a5;
+    margin-bottom:10px;
+}
+
+.origemOfertas button{
+    border:none;
+    background:none;
+    padding:0;
+    font-size:12px;
+    font-weight:700;
+    color:var(--laranja);
+    text-decoration:underline;
+}
+
+.blocoOpcao h6,
+.pendentesContrato h6{
+    margin:0 0 10px;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.4px;
+    color:#888;
+    font-weight:700;
+}
+
+.ofertaContrato{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:9px 0;
+    border-bottom:1px solid #f4f5f7;
+    cursor:pointer;
+    font-size:14px;
+}
+
+.ofertaContrato:last-child{
+    border-bottom:none;
+}
+
+.ofertaContrato input{
+    width:20px;
+    height:20px;
+    flex-shrink:0;
+    accent-color:var(--laranja);
+}
+
+.semPendencias{
+    padding:20px;
+    text-align:center;
+    color:#888;
+    font-weight:600;
+}
+
+.cabecalhoCadastro{
+    border-radius:12px;
+    padding:11px 14px;
+    margin-bottom:14px;
+    font-size:13px;
+}
+
+.cadastroOk{
+    background:#d8f5e3;
+    color:#136b38;
+    font-weight:700;
+}
+
+.cadastroPendente{
+    background:#fdf3cf;
+    color:#7a5b06;
+}
+
+.cabecalhoCadastro ul{
+    margin:7px 0 0;
+    padding-left:18px;
+}
+
+.cabecalhoCadastro li{
+    margin-bottom:3px;
+}
+
+.pendentesContrato{
+    margin-top:16px;
+    border:1px solid #f0d9a0;
+    border-radius:14px;
+    padding:12px 14px;
+    background:#fffdf6;
+}
+
+.notaPendentes{
+    font-size:12px;
+    color:#8a7a4e;
+    margin:0 0 11px;
+}
+
+.campoPendente{
+    display:block;
+    margin-bottom:11px;
+}
+
+.campoPendente span{
+    display:block;
+    font-size:12px;
+    font-weight:700;
+    color:#555;
+    margin-bottom:4px;
+}
+
+.campoPendente input,
+.campoPendente select{
+    width:100%;
+    border:1px solid #dfe2e7;
+    border-radius:11px;
+    height:44px;
+    padding:0 12px;
+    /* 16px evita o zoom automático do iOS ao focar o campo */
+    font-size:16px;
+}
+
+.campoPendente input:focus,
+.campoPendente select:focus{
+    outline:none;
+    border-color:var(--laranja);
+    box-shadow:0 0 0 3px rgba(255,107,0,.14);
+}
+
+.campoPendente input.invalido{
+    border-color:#dc3545;
+    box-shadow:0 0 0 3px rgba(220,53,69,.12);
+}
+
+.gradeConta{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+    gap:0 12px;
+}
+
+.resumoContrato{
+    /* Só aparece a partir da etapa 2, quando já existe parcela escolhida. */
+    display:none;
+    background:#f7f8fa;
+    border-left:3px solid var(--laranja);
+    border-radius:12px;
+    padding:11px 14px;
+    margin-bottom:12px;
+}
+
+.resumoContrato strong{
+    font-size:15px;
+    color:#222;
+}
+
+.linhaResumo{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:10px;
+    padding:8px 0;
+    border-bottom:1px solid #f4f5f7;
+}
+
+.linhaResumo:last-child{
+    border-bottom:none;
+}
+
+.linhaResumo span{
+    font-size:12px;
+    text-transform:uppercase;
+    color:#8b93a5;
+    font-weight:700;
+}
+
+.linhaResumo strong{
+    font-size:14px;
+    color:#222;
+    text-align:right;
+    overflow-wrap:anywhere;
+}
+
+.resumoContrato span{
+    display:block;
+    font-size:11px;
+    text-transform:uppercase;
+    color:#8b93a5;
+    font-weight:700;
+}
+
+.contratoGerado{
+    border:1px solid #b7e4c7;
+    background:#f2fbf5;
+    border-radius:14px;
+    padding:14px;
+    margin-top:12px;
+}
+
+.contratoGerado h6{
+    margin:0 0 9px;
+    color:#136b38;
+    font-weight:bold;
+}
+
+.contratoGerado p{
+    margin:0 0 6px;
+    font-size:13px;
+    color:#333;
+    overflow-wrap:anywhere;
+}
+
+.contratoGerado .btnLinha{
+    text-decoration:none;
+}
+
+
+/* ===============================
+   COPIAR CELULAR / CPF
+   Valor à esquerda, botão encostado na direita da linha.
+================================ */
+
+.linhaCampo{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    width:100%;
+    font-size:15px;
+}
+
+.valorCopiavelPainel{
+    font-weight:600;
+    color:#222;
+}
+
+.btnCopiar{
+    flex-shrink:0;
+    border:none;
+    border-radius:9px;
+    width:32px;
+    height:32px;
+    background:#eef0f3;
+    color:#555;
+    font-size:14px;
+}
+
+.btnCopiar:hover{
+    background:var(--laranja);
+    color:#fff;
+}
+
+
+/* ===============================
+   VISÃO EM CARDS
+   Alternativa à grade: os controles do DataTables (busca, paginação) seguem
+   valendo, então o container troca só as linhas pelos cards.
+================================ */
+
+.visoesPainel{
+    display:flex;
+    gap:6px;
+    /* Empurra o par de botões para a ponta direita da barra de filtros. */
+    margin-left:auto;
+}
+
+.chipVisao{
+    border:1px solid #dfe2e7;
+    border-radius:20px;
+    height:40px;
+    padding:0 15px;
+    font-size:13px;
+    font-weight:700;
+    background:#fff;
+    color:#555;
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+}
+
+.chipVisao.ativo{
+    background:var(--escuro);
+    border-color:var(--escuro);
+    color:#fff;
+}
+
+.cardsPainel{
+    display:none;
+    grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+    gap:14px;
+    margin:14px 0;
+}
+
+.caixaTabela.emCards .cardsPainel{
+    display:grid;
+}
+
+/* Some a grade inteira — cabeçalho, linhas e detalhes —, mas não o wrapper:
+   busca, seletor de tamanho e paginação continuam na tela. */
+.caixaTabela.emCards table.dataTable{
+    display:none;
+}
+
+.cardPainel{
+    background:#fff;
+    border:1px solid #eceef1;
+    border-radius:16px;
+    padding:15px;
+    box-shadow:0 2px 10px rgba(0,0,0,.06);
+}
+
+.cardPainelTopo{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:6px;
+}
+
+.cardPainelTopo h3{
+    margin:0;
+    font-size:16px;
+    font-weight:bold;
+    color:#111;
+    /* Nomes longos quebram no card em vez de esticá-lo. */
+    overflow-wrap:anywhere;
+}
+
+.seloOfertas{
+    flex-shrink:0;
+    background:#d8f5e3;
+    color:#136b38;
+    border-radius:20px;
+    padding:4px 10px;
+    font-size:12px;
+    font-weight:700;
+    white-space:nowrap;
+}
+
+.cardPainelData{
+    margin:0 0 12px;
+    font-size:12px;
+    color:#888;
+    font-weight:600;
+}
+
+.cardPainelCampo{
+    margin-bottom:11px;
+}
+
+.rotuloCampo{
+    display:block;
+    font-size:11px;
+    text-transform:uppercase;
+    color:#888;
+    font-weight:700;
+    margin-bottom:3px;
+}
+
+.cardPainelAcoes{
+    display:flex;
+    flex-wrap:wrap;
+    margin-top:12px;
+}
+
+.cardPainelAcoes .btnLinha{
+    flex:1 1 auto;
+    justify-content:center;
+}
+
+.cardPainelVazio{
+    grid-column:1 / -1;
+    padding:26px;
+    text-align:center;
+    color:#888;
+    font-weight:600;
+}
+
+/* O detalhe do Responsive é uma <ul>: o rótulo fica acima do valor,
+   e a linha de ações quebra em vez de esticar a tabela. */
+#tabelaPainel + .dtr-details,
+#tabelaPainel td.dtr-control{
+    cursor:pointer;
+}
+
+table#tabelaPainel ul.dtr-details{
+    display:block;
+    width:100%;
+    padding:0;
+    margin:0;
+}
+
+table#tabelaPainel ul.dtr-details > li{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:8px;
+    padding:7px 0;
+    border-bottom:1px solid #f0f1f4;
+}
+
+table#tabelaPainel ul.dtr-details > li:last-child{
+    border-bottom:none;
+}
+
+table#tabelaPainel ul.dtr-details .dtr-title{
+    min-width:74px;
+    font-size:12px;
+    text-transform:uppercase;
+    color:#888;
+    font-weight:700;
+}
+
+/* Ocupa o resto da linha para o botão de copiar chegar até a borda direita. */
+table#tabelaPainel ul.dtr-details .dtr-data{
+    flex:1;
+    font-size:14px;
+    font-weight:600;
+    color:#222;
 }

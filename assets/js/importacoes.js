@@ -471,8 +471,10 @@ async function enviarImportacao(){
         await carregarImportacoes();
 
         // A importação cria clientes no servidor: a lista local fica velha
-        // no mesmo instante, então é recarregada junto.
+        // no mesmo instante, então é recarregada junto — e o Painel também,
+        // que lê a mesma rota.
         await carregarClientes();
+        await carregarPainel();
 
         mostrarAvisoImportacoes(
             "Arquivo enviado. A lista de clientes foi atualizada.",

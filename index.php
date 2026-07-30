@@ -40,10 +40,7 @@
 
     <div class="topoLateral">
 
-        <img
-            src="https://i.ibb.co/bM4HXvHD/Logo-VC.jpg"
-            alt="VeloxConsig CRM"
-            loading="eager">
+        <span class="marcaLateral">VeloxConsig</span>
 
         <button
             type="button"
@@ -121,80 +118,74 @@
 
         <div class="container-fluid">
 
-            <div class="dashboard">
+            <div class="cabecalhoCrud">
 
-                <div class="cardDash" onclick="aplicarFiltro('todos')" id="dashTodos">
-                    <h2 id="total">0</h2>
-                    <span>Total</span>
+                <div>
+                    <h2>Clientes com oferta</h2>
+                    <p>Vindos da API: só quem tem oferta disponível e celular cadastrado.</p>
                 </div>
 
-                <div class="cardDash" onclick="aplicarFiltro('pendentes')" id="dashPendentes">
-                    <h2 id="consultados">0</h2>
-                    <span>Consultados</span>
-                </div>
+                <div class="acoesCrud">
 
-                <div class="cardDash" onclick="aplicarFiltro('com')" id="dashCom">
-                    <h2 id="comMargem">0</h2>
-                    <span>Com Margem</span>
-                </div>
+                    <button type="button" class="btnSecundario" onclick="carregarPainel()">
+                        <i class="bi bi-arrow-clockwise"></i>
+                        Atualizar
+                    </button>
 
-                <div class="cardDash" onclick="aplicarFiltro('sem')" id="dashSem">
-                    <h2 id="semMargem">0</h2>
-                    <span>Sem Margem</span>
-                </div>
-
-                <div class="cardDash" onclick="aplicarFiltro('aguardando')" id="dashAguardando">
-                    <h2 id="aguardandoResposta">0</h2>
-                    <span>Aguardando resposta</span>
                 </div>
 
             </div>
 
-            <div class="importar">
+            <!-- Filtro pela data de criação do cliente. -->
+            <div class="filtrosPainel">
 
-                <button
-                    type="button"
-                    id="btnImportar"
-                    class="btnImportar"
-                    onclick="importarLeads()">
-                    <i class="bi bi-upload"></i>
-                    Importar
+                <button type="button" id="filtroHoje" class="chipFiltro" onclick="filtrarPainelPor('hoje')">
+                    Hoje
                 </button>
 
-                <input
-                    id="arquivo"
-                    type="file"
-                    accept=".xlsx,.xls,.csv">
-
-                <button class="btnExportar" onclick="exportarPlanilha()">
-                    <i class="bi bi-download"></i>
-                    Exportar
+                <button type="button" id="filtroOntem" class="chipFiltro" onclick="filtrarPainelPor('ontem')">
+                    Ontem
                 </button>
+
+                <button type="button" id="filtroTodos" class="chipFiltro" onclick="filtrarPainelPor('todos')">
+                    Todos
+                </button>
+
+                <label id="campoDataPainel" class="campoDataPainel" for="dataPainel">
+                    <i class="bi bi-calendar-event"></i>
+                    <input
+                        type="date"
+                        id="dataPainel"
+                        aria-label="Selecionar data"
+                        onchange="filtrarPainelPorData(this.value)">
+                </label>
+
+                <!-- Mesmos dados, duas apresentações. -->
+                <div class="visoesPainel">
+
+                    <button type="button" id="visaoTabela" class="chipVisao ativo" onclick="alternarVisaoPainel('tabela')" title="Ver em tabela">
+                        <i class="bi bi-table"></i>
+                        Tabela
+                    </button>
+
+                    <button type="button" id="visaoCards" class="chipVisao" onclick="alternarVisaoPainel('cards')" title="Ver em cards">
+                        <i class="bi bi-grid-3x3-gap"></i>
+                        Cards
+                    </button>
+
+                </div>
 
             </div>
 
-            <div class="pesquisa">
+            <div id="avisoPainel" class="avisoClientes"></div>
 
-                <i class="bi bi-search"></i>
+            <div id="caixaPainel" class="caixaTabela">
 
-                <input
-                    type="search"
-                    id="campoPesquisa"
-                    placeholder="Pesquisar nome, CPF ou telefone..."
-                    autocomplete="off">
+                <table id="tabelaPainel" class="table table-striped nowrap" style="width:100%"></table>
 
-                <button
-                    type="button"
-                    id="limparPesquisa"
-                    onclick="limparPesquisa()"
-                    aria-label="Limpar pesquisa">
-                    <i class="bi bi-x-lg"></i>
-                </button>
+                <!-- Movido para dentro do layout do DataTables ao iniciar a tabela. -->
+                <div id="cardsPainel" class="cardsPainel"></div>
 
-            </div>
-
-            <div id="clientes">
-                <!-- cards -->
             </div>
 
         </div>
@@ -412,6 +403,69 @@ JOSE DA SILVA;11912345678;50181123878</pre>
  </div>
 </div>
 
+<!-- =========================
+     MODAL GERAR CONTRATO (3 etapas)
+========================= -->
+
+<div class="modal fade" id="modalContrato" tabindex="-1" aria-hidden="true">
+ <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+  <div class="modal-content modalClienteConteudo">
+
+   <div class="modal-header">
+    <h5 class="modal-title">📄 Gerar contrato</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+   </div>
+
+   <!-- Nenhuma etapa avança sem estar validada. -->
+   <div class="passosContrato">
+    <div class="passoContrato ativo" id="passoContrato1"><span>1</span> Oferta</div>
+    <div class="passoContrato" id="passoContrato2"><span>2</span> Cadastro</div>
+    <div class="passoContrato" id="passoContrato3"><span>3</span> Banco</div>
+    <div class="passoContrato" id="passoContrato4"><span>4</span> Contrato</div>
+   </div>
+
+   <div class="modal-body">
+
+    <div id="clienteContrato" class="clienteProposta"></div>
+
+    <!-- Parcela escolhida na etapa 1: segue visível nas etapas seguintes. -->
+    <div id="resumoSelecaoContrato" class="resumoContrato"></div>
+
+    <div id="avisoContrato" class="avisoContrato" role="alert"></div>
+
+    <div id="etapaContrato1" class="etapaContrato"></div>
+    <div id="etapaContrato2" class="etapaContrato"></div>
+    <div id="etapaContrato3" class="etapaContrato"></div>
+    <div id="etapaContrato4" class="etapaContrato"></div>
+
+   </div>
+
+   <div class="modal-footer">
+
+    <!-- Copiar/enviar o texto da etapa atual: ofertas na 1, resumo na 4. -->
+    <div id="acoesOfertaContrato" class="acoesOfertaContrato">
+
+     <button type="button" class="btnLinha btnLinhaCopiar" onclick="copiarTextoContrato()">
+      <i class="bi bi-clipboard"></i>
+      Copiar
+     </button>
+
+     <button type="button" class="btnLinha btnLinhaZap" onclick="enviarTextoContratoWhatsApp()">
+      <i class="bi bi-whatsapp"></i>
+      WhatsApp
+     </button>
+
+    </div>
+
+    <button type="button" id="btnVoltarContrato" class="btnSecundario" onclick="voltarEtapaContrato()">Voltar</button>
+    <button type="button" id="btnAvancarContrato" class="btnPrimario" onclick="avancarEtapaContrato()">Avançar</button>
+
+   </div>
+
+  </div>
+ </div>
+</div>
+
 <footer class="rodape">
     VeloxConsig CRM Mobile
 </footer>
@@ -428,6 +482,9 @@ JOSE DA SILVA;11912345678;50181123878</pre>
 <script src="assets/js/app.js"></script>
 <script src="assets/js/clientes-crud.js"></script>
 <script src="assets/js/importacoes.js"></script>
+<script src="assets/js/simulacao.js"></script>
+<script src="assets/js/contrato.js"></script>
+<script src="assets/js/painel.js"></script>
 
 </body>
 </html>

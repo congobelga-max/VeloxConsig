@@ -579,54 +579,13 @@ async function confirmarExclusaoCliente(idApi){
 
 // ===============================
 // SINCRONIZAÇÃO COM O PAINEL
-// Converte os clientes da API para o modelo local (`clientes`), que é o
-// que os cards, o dashboard, o WhatsApp e a proposta consomem.
-// O histórico gravado por CPF é preservado — ele nunca esteve no servidor.
+// O Painel lê a própria API (painel.js), então sincronizar é recarregá-lo
+// com o que acabou de ser cadastrado aqui e levar o operador até lá.
 // ===============================
 
 function sincronizarPainel(){
 
-    if(!clientesApi.length){
-        alert("Carregue os clientes antes de sincronizar.");
-        return;
-    }
-
-    clientes = clientesApi
-
-        // Sem CPF não há chave local possível; o mesmo critério da importação.
-        .filter(cliente => cliente.id)
-
-        .map(cliente=>{
-
-            const status = localStorage.getItem("status_" + cliente.id) || "nao";
-
-            return {
-                id: cliente.id,
-                nome: cliente.nome,
-                cpf: cliente.cpf,
-                // O Painel chama de telefone o que a API chama de celular.
-                telefone: cliente.celular,
-                status: status,
-                data: status === "nao" ? "" : (localStorage.getItem("data_" + cliente.id) || ""),
-                hora: status === "nao" ? "" : (localStorage.getItem("hora_" + cliente.id) || "")
-            };
-
-        })
-
-        .sort((a,b) => a.nome.localeCompare(b.nome));
-
-    filtroAtual = "todos";
-
-    document
-        .querySelectorAll(".cardDash")
-        .forEach(card => card.classList.remove("ativo"));
-
-    const dashTodos = document.getElementById("dashTodos");
-
-    if(dashTodos) dashTodos.classList.add("ativo");
-
-    renderizarCards();
-    atualizarDashboard();
+    carregarPainel();
 
     mostrarSecao("Painel");
 
@@ -662,6 +621,21 @@ function mostrarSecao(secao){
 
     document.getElementById("tituloSecao").textContent =
         TITULOS_SECAO[secao] || "Painel";
+
+    if(secao === "Painel"){
+
+        if(!tabelaPainelIniciada){
+
+            carregarPainel();
+
+        }else{
+
+            // A tabela pode ter sido montada oculta: as colunas são remedidas.
+            tabelaPainel.columns.adjust().responsive.recalc();
+
+        }
+
+    }
 
     if(secao === "Clientes"){
 

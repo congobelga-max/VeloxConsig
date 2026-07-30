@@ -4,9 +4,15 @@ let filtroAtual = "todos";
 
 let pesquisaAtual = "";
 
+// O Painel virou tabela (painel.js): os cards, os tiles e o seletor de planilha
+// não existem mais no index.php. As funções abaixo continuam aqui porque o
+// tratador de proposta e o WhatsApp dependem delas — as que mexem no DOM antigo
+// checam o elemento antes de usá-lo e simplesmente não fazem nada.
 const arquivo = document.getElementById("arquivo");
 
-arquivo.addEventListener("change", importarPlanilha);
+if(arquivo){
+    arquivo.addEventListener("change", importarPlanilha);
+}
 
 // =========================
 // IMPORTAR PLANILHA
@@ -85,7 +91,9 @@ async function importarLeads(){
         // Pasta não publicada, arquivo ausente ou ilegível: o operador escolhe.
         console.warn("Pasta de leads indisponível, abrindo o seletor:", erro.message);
 
-        document.getElementById("arquivo").click();
+        const seletor = document.getElementById("arquivo");
+
+        if(seletor) seletor.click();
 
     }finally{
 
@@ -470,16 +478,25 @@ function atualizarDashboard(){
 
     });
 
-    document.getElementById("total").innerHTML=total;
+    escreverContador("total",total);
 
-    document.getElementById("consultados").innerHTML=consultados;
+    escreverContador("consultados",consultados);
 
-    document.getElementById("comMargem").innerHTML=com;
+    escreverContador("comMargem",com);
 
-    document.getElementById("semMargem").innerHTML=sem;
+    escreverContador("semMargem",sem);
 
-    const aguardandoEl=document.getElementById("aguardandoResposta");
-    if(aguardandoEl) aguardandoEl.innerHTML=aguardando;
+    escreverContador("aguardandoResposta",aguardando);
+
+}
+
+
+// Os tiles saíram do Painel: sem o elemento, o contador é ignorado.
+function escreverContador(id, valor){
+
+    const elemento = document.getElementById(id);
+
+    if(elemento) elemento.textContent = valor;
 
 }
 
@@ -490,6 +507,9 @@ function atualizarDashboard(){
 function renderizarCards(){
 
     const lista = document.getElementById("clientes");
+
+    // A lista de cards não existe mais no Painel.
+    if(!lista) return;
 
     lista.innerHTML = "";
 
@@ -841,6 +861,15 @@ function irParaProximoCliente(idAtual){
 // APLICAR fILTRO
 // ===============================
 
+const TILES_FILTRO = {
+    todos:"dashTodos",
+    pendentes:"dashPendentes",
+    com:"dashCom",
+    sem:"dashSem",
+    aguardando:"dashAguardando"
+};
+
+
 function aplicarFiltro(filtro){
 
     filtroAtual = filtro;
@@ -849,23 +878,12 @@ function aplicarFiltro(filtro){
         .querySelectorAll(".cardDash")
         .forEach(c=>c.classList.remove("ativo"));
 
-    if(filtro=="todos")
-        document.getElementById("dashTodos").classList.add("ativo");
+    const tile = document.getElementById(TILES_FILTRO[filtro] || "");
 
-    if(filtro=="pendentes")
-        document.getElementById("dashPendentes").classList.add("ativo");
-
-    if(filtro=="com")
-        document.getElementById("dashCom").classList.add("ativo");
-
-    if(filtro=="sem")
-        document.getElementById("dashSem").classList.add("ativo");
-
-    if(filtro=="aguardando")
-        document.getElementById("dashAguardando").classList.add("ativo");
+    if(tile) tile.classList.add("ativo");
 
     renderizarCards();
-}	
+}
 // ===============================
 // EXPORTAR PLANILHA
 // ===============================
@@ -1055,9 +1073,11 @@ function formatarCPF(cpf){
 // MENSAGEM CASO NÃO TENHA DADOS
 // ===============================
 
-if(clientes.length===0){
+const listaCards = document.getElementById("clientes");
 
-    document.getElementById("clientes").innerHTML=`
+if(clientes.length===0 && listaCards){
+
+    listaCards.innerHTML=`
 
         <div class="alert alert-warning text-center">
 
@@ -1166,6 +1186,58 @@ function resumoBancos(t){
 }
 function valorBR(v){return Number(String(v).replace(/\./g,"").replace(",","."))}
 
+// Texto que chega ao cliente quando há oferta. Usado pelo retorno do Telegram
+// e pela simulação da API (simulacao.js): a mensagem é a mesma nos dois
+// caminhos, e o modelo mora num lugar só.
+//
+// Recebe blocos — [{ofertas:[{prazo, parcela, liberado}]}] —, um por banco.
+// Cada bloco vira uma "Opção N", que é como o cliente distingue as propostas
+// sem que o nome do banco apareça. As ofertas já vêm ordenadas por prazo e
+// com parcela/liberado formatados em pt-BR.
+function montarMensagemOfertas(opcoes){
+
+    const blocos = opcoes.filter(bloco =>
+        bloco && bloco.ofertas && bloco.ofertas.length
+    );
+
+    const todas = blocos.reduce(
+        (lista, bloco) => lista.concat(bloco.ofertas),
+        []
+    );
+
+    const maior = todas.reduce(
+        (m,x) => valorBR(x.liberado) > valorBR(m.liberado) ? x : m,
+        todas[0]
+    );
+
+    let msg = "Consegui algumas condições disponíveis para você 😊\n\n" +
+        "💰 Você pode liberar até R$ " + maior.liberado + ".\n\n" +
+        "Veja as opções:\n";
+
+    blocos.forEach((bloco, indice)=>{
+
+        // Com um bloco só o cabeçalho não separa nada — apenas polui.
+        msg += "\n" + (blocos.length > 1 ? "Opção " + (indice + 1) + "\n" : "");
+
+        bloco.ofertas.forEach(x=>{
+            msg += "• " + x.prazo + "x de R$ " + x.parcela +
+                " → recebe R$ " + x.liberado + "\n";
+        });
+
+    });
+
+    return msg + "\nQual dessas opções fica melhor para você?";
+
+}
+
+
+// Mesma resposta para "consultei e não veio nada", venha de onde vier.
+const MENSAGEM_SEM_OFERTA =
+    "Fiz a consulta das condições disponíveis no momento e, por enquanto, " +
+    "não conseguimos uma proposta liberada para contratação.\n\n" +
+    "As condições podem sofrer atualizações. Vou deixar seu contato em " +
+    "acompanhamento e, assim que surgir uma opção disponível, entro em contato. 😊";
+
 let colagemTelegramEmAndamento = false;
 
 async function colarTelegramAutomaticamente(){
@@ -1190,8 +1262,12 @@ async function colarTelegramAutomaticamente(){
             campo.value = texto;
             campo.dispatchEvent(new Event("input", {bubbles:true}));
 
-            // Após colar a resposta do Telegram, gera a proposta automaticamente.
-            gerarProposta();
+            // Após colar a resposta do Telegram, gera a proposta automaticamente
+            // — mas só se a simulação da API não tiver escrito nada, senão um
+            // toque no campo apagaria a mensagem que já estava pronta.
+            if(!document.getElementById("mensagemProposta").value.trim()){
+                gerarProposta();
+            }
         }
 
     }catch(erro){
@@ -1249,11 +1325,8 @@ function gerarProposta(){
 
  if(o.length){
    o.sort((x,y)=>x.prazo-y.prazo);
-   let maior=o.reduce((m,x)=>valorBR(x.liberado)>valorBR(m.liberado)?x:m,o[0]);
-   let msg="Consegui algumas condições disponíveis para você 😊\n\n💰 Você pode liberar até R$ "+maior.liberado+".\n\nVeja as opções:\n\n";
-   o.forEach(x=>msg+="• "+x.prazo+"x de R$ "+x.parcela+" → recebe R$ "+x.liberado+"\n");
-   msg+="\nQual dessas opções fica melhor para você?";
-   campo.value=msg;
+   // O retorno do Telegram é de um banco só: um bloco, sem cabeçalho "Opção".
+   campo.value=montarMensagemOfertas([{ofertas:o}]);
    localStorage.setItem("classificacao_"+id,"oferta_disponivel");
    localStorage.setItem("classificacao_texto_"+id,"Oferta disponível");
    av.textContent=pay ? "✓ Oferta disponível — Paypro priorizada." : "✓ Oferta disponível.";
@@ -1284,7 +1357,7 @@ function gerarProposta(){
 
  const semOferta=/nenhum banco disponível no momento|nenhum banco disponivel no momento|sem oferta disponível no momento|sem oferta disponivel no momento|cliente não aprovado pelo motor de crédito|cliente nao aprovado pelo motor de credito|\bdenied\b/i.test(t);
  if(semOferta){
-   campo.value="Fiz a consulta das condições disponíveis no momento e, por enquanto, não conseguimos uma proposta liberada para contratação.\n\nAs condições podem sofrer atualizações. Vou deixar seu contato em acompanhamento e, assim que surgir uma opção disponível, entro em contato. 😊";
+   campo.value=MENSAGEM_SEM_OFERTA;
    const comMargem=margem!==null && margem>0;
    localStorage.setItem("classificacao_"+id,comMargem ? "com_margem_sem_oferta" : "sem_oferta");
    localStorage.setItem("classificacao_texto_"+id,comMargem ? "Com margem — Sem oferta bancária" : "Sem oferta bancária");
@@ -1299,15 +1372,89 @@ function gerarProposta(){
  av.style.display="block";
 }
 
-async function copiarProposta(){
- const f=document.getElementById("mensagemProposta"),m=f.value.trim();if(!m)return alert("Gere a proposta primeiro.");
- try{if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(m);else{f.select();document.execCommand("copy")}}catch(e){f.select();document.execCommand("copy")}
- alert("Proposta copiada!");
+// Copiar e enviar valem para a proposta e para o assistente de contrato:
+// a implementação fica aqui, e as duas telas chamam a mesma.
+
+async function copiarParaAreaDeTransferencia(texto){
+
+    if(!texto) return false;
+
+    try{
+
+        if(navigator.clipboard && window.isSecureContext){
+            await navigator.clipboard.writeText(texto);
+            return true;
+        }
+
+    }catch(erro){
+        // Sem permissão ou fora de contexto seguro: cai no modo antigo.
+    }
+
+    // execCommand copia o que está selecionado, então precisa de um campo real
+    // na página — fora da tela para não piscar nada para o operador.
+    const campo = document.createElement("textarea");
+
+    campo.value = texto;
+    campo.style.position = "fixed";
+    campo.style.left = "-9999px";
+
+    document.body.appendChild(campo);
+    campo.select();
+
+    let copiou = false;
+
+    try{
+        copiou = document.execCommand("copy");
+    }catch(erro){
+        copiou = false;
+    }
+
+    document.body.removeChild(campo);
+
+    return copiou;
+
 }
+
+
+// Devolve a janela aberta (ou null): quem chama fora de um clique direto
+// precisa saber quando o bloqueador de pop-up barrou a abertura.
+function abrirWhatsappComTexto(telefone, texto){
+
+    let numero = somenteNumeros(telefone);
+
+    if(numero.length === 10 || numero.length === 11) numero = "55" + numero;
+
+    return window.open(
+        "https://wa.me/" + numero + "?text=" + encodeURIComponent(texto),
+        "_blank"
+    );
+
+}
+
+
+async function copiarProposta(){
+
+    const mensagem = document.getElementById("mensagemProposta").value.trim();
+
+    if(!mensagem) return alert("Gere a proposta primeiro.");
+
+    await copiarParaAreaDeTransferencia(mensagem);
+
+    alert("Proposta copiada!");
+
+}
+
+
 function enviarPropostaWhatsApp(){
- if(!clientePropostaAtual)return; const m=document.getElementById("mensagemProposta").value.trim();if(!m)return alert("Gere a proposta primeiro.");
- let n=String(clientePropostaAtual.telefone||"").replace(/\D/g,"");if(n.length===10||n.length===11)n="55"+n;
- window.open("https://wa.me/"+n+"?text="+encodeURIComponent(m), "_blank");
+
+    if(!clientePropostaAtual) return;
+
+    const mensagem = document.getElementById("mensagemProposta").value.trim();
+
+    if(!mensagem) return alert("Gere a proposta primeiro.");
+
+    abrirWhatsappComTexto(clientePropostaAtual.telefone, mensagem);
+
 }
 
 // ===============================
