@@ -46,7 +46,9 @@ Each table is built while hidden, so its section must call `columns.adjust().res
 
 ### Painel (`assets/js/painel.js`)
 
-Two visible columns — **Nome** and **Data de criação** (`createdAtUtc`, newest first). Everything else lives in the Responsive child row: celular, CPF, offer count, and the **WhatsApp** / **Montar proposta** buttons. Those columns carry `className:"none"`, which keeps them out of the grid at *every* width — the child row is not a small-screen fallback here, it is where the detail is meant to be. The ⊕ toggle is column 0 (`className:"dtr-control"` + `responsive.details.type:"column"`).
+Three visible columns — **Nome**, **Contato** and **Data de criação** (`createdAtUtc`, newest first; it is column index **3**, since 0 is the Responsive control — the `order` config has to move whenever a visible column is inserted).
+
+**Contato** marks who has already been approached, read from `contato_inicial_<cpf>`. That key is local and changes while the list is on screen, so `atualizarContatosPainel()` copies it onto the row objects before every draw instead of the mapper reading it once at load. The **Não contatados** chip filters on it and is a *second, independent dimension*: it combines with the date filter rather than replacing it. The WhatsApp button goes through `contatarPainel()`, which calls `abrirWhatsapp()` and then redraws — with the filter on, the row leaves the list entirely (so `desenharPainel()`), with it off only the cell changes (so `rows().invalidate()`, which keeps the page and any open child row). Everything else lives in the Responsive child row: celular, CPF, offer count, and the **WhatsApp** / **Montar proposta** buttons. Those columns carry `className:"none"`, which keeps them out of the grid at *every* width — the child row is not a small-screen fallback here, it is where the detail is meant to be. The ⊕ toggle is column 0 (`className:"dtr-control"` + `responsive.details.type:"column"`).
 
 **Two views over one table.** The Tabela/Cards toggle does not build a second data set: `renderizarCardsPainel()` reads `rows({page:"current", search:"applied", order:"applied"})`, so the cards are the DataTable's current page rendered differently and cannot drift from it. The `#cardsPainel` container is moved *into* the DataTables layout next to the `<table>` on init, and `.emCards` hides `table.dataTable` only — the wrapper stays, so the search box, page-length selector and paginator keep working in card mode. Both views share `valorComCopia()` and `botoesAcao()` for the same reason. Cards are re-rendered from the `draw` event and skipped entirely while the table view is active.
 
@@ -117,6 +119,16 @@ The client `id` is the CPF stripped to digits (`somenteNumeros`), and it is the 
 | `contato_inicial_<id>` | `abrirWhatsapp` | `"sim"` once the first-contact message has been sent |
 | `contato_data_<id>`, `contato_hora_<id>` | `abrirWhatsapp` | timestamp of first contact |
 | `classificacao_<id>`, `classificacao_texto_<id>` | `gerarProposta` | outcome of the last Telegram parse |
+| `mensagem_inicial_<id>` | `abrirWhatsapp` | index of the opening message this client got |
+| `rodizio_mensagem_inicial` | `abrirWhatsapp` | next position in the opening-message rotation (not per-CPF) |
+
+### Opening messages (`assets/js/mensagens.js`)
+
+`MENSAGENS_INICIAIS` holds **50 wordings of the same approach**, and `abrirWhatsapp` takes the next one in rotation for each new client. Blasting an identical text at lead after lead is what gets a WhatsApp number flagged as spam; the whole list is used before anything repeats.
+
+The chosen index is stored per CPF, so reopening a conversation never swaps the text under a client who already read it — `rodizio_mensagem_inicial` only advances for someone new. That per-CPF key is in `migrarHistoricoCpf`'s prefix list for the usual reason: without it, padding the leading zeros would look like a fresh client and produce a *second, different* opening message for the same person.
+
+Only the first-contact message rotates. The follow-up (sent once `contato_inicial_<id>` is set) is still a single text.
 
 Nothing ever reads these back except import and the "aguardando" counters — the app has no boot-time restore, so a page refresh empties the client list and the operator must re-import.
 

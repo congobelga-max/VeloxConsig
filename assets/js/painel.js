@@ -12,6 +12,9 @@ let tabelaPainelIniciada = false;
 // hoje | ontem | data | todos
 let filtroDataPainel = "hoje";
 
+// Filtro independente do de data: esconde quem já recebeu o primeiro contato.
+let somenteNaoContatados = false;
+
 // AAAA-MM-DD, no formato que o <input type="date"> devolve.
 let dataEscolhidaPainel = "";
 
@@ -86,7 +89,13 @@ function mapearClientePainel(registro){
 
         ofertas: quantidadeOfertas(registro),
 
-        criadoEm: registro.createdAtUtc || registro.criadoEm || ""
+        criadoEm: registro.createdAtUtc || registro.criadoEm || "",
+
+        // Preenchido por atualizarContatosPainel(): o primeiro contato é local
+        // e muda enquanto a lista está na tela.
+        contatado: false,
+        contatoData: "",
+        contatoHora: ""
 
     };
 
@@ -159,13 +168,59 @@ function diaAlvoPainel(){
 }
 
 
+// ===============================
+// PRIMEIRO CONTATO
+// `contato_inicial_<cpf>` é gravado por abrirWhatsapp() e é local: a lista
+// precisa relê-lo antes de cada desenho, senão o lead que acabou de ser
+// abordado continua aparecendo como não contatado.
+// ===============================
+
+function atualizarContatosPainel(){
+
+    painelClientes.forEach(cliente=>{
+
+        cliente.contatado =
+            localStorage.getItem("contato_inicial_" + cliente.id) === "sim";
+
+        cliente.contatoData = cliente.contatado
+            ? (localStorage.getItem("contato_data_" + cliente.id) || "")
+            : "";
+
+        cliente.contatoHora = cliente.contatado
+            ? (localStorage.getItem("contato_hora_" + cliente.id) || "")
+            : "";
+
+    });
+
+}
+
+
+function textoContatoPainel(cliente){
+
+    if(!cliente.contatado) return "Não contatado";
+
+    const quando = [cliente.contatoData, cliente.contatoHora]
+        .filter(Boolean)
+        .join(" ");
+
+    return quando ? "Contatado em " + quando : "Contatado";
+
+}
+
+
 function clientesFiltradosPainel(){
 
     const alvo = diaAlvoPainel();
 
-    if(!alvo) return painelClientes;
+    return painelClientes.filter(cliente=>{
 
-    return painelClientes.filter(cliente => diaDoCliente(cliente) === alvo);
+        if(alvo && diaDoCliente(cliente) !== alvo) return false;
+
+        if(somenteNaoContatados && cliente.contatado) return false;
+
+        return true;
+
+    });
 
 }
 
@@ -228,7 +283,7 @@ function valorComCopia(valor, rotulo){
 function botoesAcao(cliente){
 
     return '<button type="button" class="btnLinha btnLinhaZap" ' +
-        "onclick=\"abrirWhatsapp('" + somenteNumeros(cliente.celular) + "','" +
+        "onclick=\"contatarPainel('" + somenteNumeros(cliente.celular) + "','" +
         escaparArgumento(cliente.nome) + "','" + cliente.id + "')\">" +
         '<i class="bi bi-whatsapp"></i> WhatsApp</button>' +
         '<button type="button" class="btnLinha btnLinhaProposta" ' +
@@ -261,11 +316,24 @@ function iniciarTabelaPainel(){
             {
                 title:"Nome",
                 data:"nome",
+                responsivePriority:1,
                 render: valor => escaparHtml(valor)
+            },
+            {
+                title:"Contato",
+                data:"contatado",
+                responsivePriority:2,
+                render: (valor, tipo, cliente) =>
+                    tipo === "display"
+                        ? '<span class="seloContato ' +
+                          (valor ? "contatoFeito" : "contatoPendente") + '">' +
+                          escaparHtml(textoContatoPainel(cliente)) + "</span>"
+                        : valor
             },
             {
                 title:"Data de criação",
                 data:"criadoEm",
+                responsivePriority:3,
                 // O valor cru é devolvido para a ordenação continuar cronológica.
                 render: (valor, tipo) =>
                     tipo === "display"
@@ -320,7 +388,8 @@ function iniciarTabelaPainel(){
         lengthMenu:[10,25,50,100],
 
         // Mais recentes primeiro: é a fila de trabalho do operador.
-        order:[[2,"desc"]],
+        // Índice 3 = "Data de criação" (0 é o controle e 2 virou "Contato").
+        order:[[3,"desc"]],
 
         language:{
             emptyTable:"Nenhum cliente com oferta neste período.",
@@ -413,6 +482,10 @@ function cartaoPainel(cliente){
         ${escaparHtml(formatarDataHora(cliente.criadoEm)) || "sem data de criação"}
     </p>
 
+    <span class="seloContato ${cliente.contatado ? "contatoFeito" : "contatoPendente"}">
+        ${escaparHtml(textoContatoPainel(cliente))}
+    </span>
+
     <div class="cardPainelCampo">
         <span class="rotuloCampo">Celular</span>
         ${valorComCopia(cliente.celular, "Telefone")}
@@ -462,11 +535,37 @@ function desenharPainel(){
 
     if(!tabelaPainel) return;
 
+    atualizarContatosPainel();
+
     tabelaPainel.clear();
     tabelaPainel.rows.add(clientesFiltradosPainel());
     tabelaPainel.draw();
 
     atualizarResumoPainel();
+
+}
+
+
+// Abre o WhatsApp e redesenha: abrirWhatsapp() marca o primeiro contato no
+// localStorage, e a linha precisa refletir isso na hora.
+function contatarPainel(numero, nome, id){
+
+    abrirWhatsapp(numero, nome, id);
+
+    atualizarContatosPainel();
+
+    // Com o filtro de não contatados ligado, a linha sai da lista — aí não
+    // basta reler as linhas, a seleção inteira muda.
+    if(somenteNaoContatados){
+
+        desenharPainel();
+
+    }else if(tabelaPainel){
+
+        tabelaPainel.rows().invalidate().draw(false);
+        atualizarResumoPainel();
+
+    }
 
 }
 
@@ -494,6 +593,21 @@ function marcarFiltroAtivo(){
     const campo = document.getElementById("campoDataPainel");
 
     if(campo) campo.classList.toggle("ativo", filtroDataPainel === "data");
+
+    const contato = document.getElementById("filtroNaoContatado");
+
+    if(contato) contato.classList.toggle("ativo", somenteNaoContatados);
+
+}
+
+
+// Independente do filtro de data: os dois valem ao mesmo tempo.
+function alternarNaoContatados(){
+
+    somenteNaoContatados = !somenteNaoContatados;
+
+    marcarFiltroAtivo();
+    desenharPainel();
 
 }
 
@@ -588,10 +702,12 @@ function atualizarResumoPainel(){
 
     }
 
+    const recorte = rotulo + (somenteNaoContatados ? " · só não contatados" : "");
+
     if(!exibidos){
 
         mostrarAvisoPainel(
-            "Nenhum cliente com oferta em " + rotulo + ". " +
+            "Nenhum cliente com oferta em " + recorte + ". " +
             'Toque em "Todos" para ver os ' + total + " clientes da lista.",
             "info"
         );
@@ -600,9 +716,14 @@ function atualizarResumoPainel(){
 
     }
 
+    const contatados = clientesFiltradosPainel()
+        .filter(cliente => cliente.contatado).length;
+
     mostrarAvisoPainel(
         exibidos + (exibidos === 1 ? " cliente" : " clientes") +
-        " com oferta · " + rotulo,
+        " com oferta · " + recorte +
+        (somenteNaoContatados ? "" : " · " + contatados + " já contatado" +
+            (contatados === 1 ? "" : "s")),
         "info"
     );
 

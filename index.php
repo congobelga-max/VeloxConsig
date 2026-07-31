@@ -160,6 +160,12 @@
                         onchange="filtrarPainelPorData(this.value)">
                 </label>
 
+                <!-- Vale junto com o filtro de data, não no lugar dele. -->
+                <button type="button" id="filtroNaoContatado" class="chipFiltro chipContato" onclick="alternarNaoContatados()">
+                    <i class="bi bi-person-dash"></i>
+                    Não contatados
+                </button>
+
                 <!-- Mesmos dados, duas apresentações. -->
                 <div class="visoesPainel">
 
@@ -479,6 +485,7 @@ JOSE DA SILVA;11912345678;50181123878</pre>
 
 <script src="assets/js/api.js"></script>
 <script src="assets/js/csv.js"></script>
+<script src="assets/js/mensagens.js"></script>
 <script src="assets/js/app.js"></script>
 <script src="assets/js/clientes-crud.js"></script>
 <script src="assets/js/importacoes.js"></script>

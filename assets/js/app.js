@@ -703,11 +703,9 @@ function abrirWhatsapp(numero, nome, id){
             "Oi, " + primeiroNome + "! Passando para dar continuidade ao nosso contato sobre as condições de crédito disponíveis para você. 😊\n\n" +
             "Caso tenha interesse, posso verificar as opções atualizadas e te enviar por aqui.";
     }else{
-        mensagem =
-            "Olá, " + primeiroNome + "! Tudo bem? 😊\n\n" +
-            "Aqui é Carol, da Velox Consig.\n\n" +
-            "Estamos entrando em contato porque identificamos que você possui margem disponível para contratação de crédito para trabalhador CLT, com desconto das parcelas direto na folha.\n\n" +
-            "Posso te enviar o valor disponível e uma simulação das parcelas?";
+        // Uma das 50 redações de mensagens.js: leads seguidos não recebem o
+        // mesmo texto, e o cliente que já foi abordado sempre recebe o dele.
+        mensagem = mensagemInicial(primeiroNome, id);
 
         const agora = new Date();
         localStorage.setItem(chave, "sim");
@@ -1024,7 +1022,10 @@ function migrarHistoricoCpf(idAntigo, idNovo){
     const prefixos = [
         "status_", "data_", "hora_",
         "contato_inicial_", "contato_data_", "contato_hora_",
-        "classificacao_", "classificacao_texto_"
+        "classificacao_", "classificacao_texto_",
+        // Sem migrar, o cliente receberia uma segunda mensagem de abertura
+        // diferente da primeira depois de o CPF ganhar os zeros à esquerda.
+        "mensagem_inicial_"
     ];
 
     prefixos.forEach(prefixo=>{

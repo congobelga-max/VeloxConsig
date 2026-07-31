@@ -514,6 +514,50 @@ body{
     color:#fff;
 }
 
+/* Filtro de outra natureza: some com quem já foi abordado, e vale junto com
+   o de data. A borda tracejada separa os dois grupos visualmente. */
+.chipContato{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    background:#fff;
+    border:1px dashed #c9ced6;
+}
+
+.chipContato.ativo{
+    background:var(--escuro);
+    border-color:var(--escuro);
+    color:#fff;
+}
+
+
+/* ===============================
+   MARCA DE PRIMEIRO CONTATO
+================================ */
+
+.seloContato{
+    display:inline-block;
+    padding:4px 10px;
+    border-radius:20px;
+    font-size:12px;
+    font-weight:700;
+    white-space:nowrap;
+}
+
+.contatoFeito{
+    background:#d8f5e3;
+    color:#136b38;
+}
+
+.contatoPendente{
+    background:#ececef;
+    color:#666;
+}
+
+.cardPainel .seloContato{
+    margin-bottom:12px;
+}
+
 .campoDataPainel{
     display:inline-flex;
     align-items:center;
