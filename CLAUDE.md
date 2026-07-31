@@ -112,6 +112,14 @@ The API's JWT carries `exp` about an hour out. `expiracaoDoToken()` decodes that
 
 DataTables `render` callbacks do no escaping of their own, so every one of them goes through `escaparHtml` / `escaparArgumento`.
 
+### Toasts (`assets/js/toast.js`)
+
+`notificar(mensagem, tipo)` replaced every `alert()` in the app — `alert` freezes the page and, on a phone, covers whatever the operator was reading. Types are `sucesso` / `erro` / `info`, which set the colour and how long it stays (errors linger longest); an unknown type falls back to `info`, and an empty message is dropped rather than showing an empty box.
+
+The container is created on the first call, so no page needs markup for it, and it sits at `z-index: 2000` — **above Bootstrap's modal (1055)**, because most of these fire with a modal open (copying a proposal, generating a contract). The text goes in via `textContent`: several messages carry an API error string.
+
+`confirm()` was **not** replaced. It blocks waiting for an answer, and the three places using it (deleting a client, deleting an import, generating a contract) all depend on that answer before acting.
+
 ### State model
 
 Three module-level globals drive everything: `clientes` (the working array), `filtroAtual`, `pesquisaAtual`. `renderizarCards()` rebuilds `#clientes` from scratch on every change; `atualizarDashboard()` recounts the five dashboard tiles. Nearly every mutation ends by calling both.
@@ -193,7 +201,9 @@ CORS was verified for `http://localhost`: the preflight reflects back whatever `
 
 The token is kept **in memory only** — not `localStorage`, which holds the CRM's own session for a different service. Its validity is not tracked: it is reused until the server answers 401, which re-logs in and repeats the call exactly once.
 
-Reading the response: **the bank name never reaches any output**, per the requirement. `opcoesDaSimulacao()` therefore returns one block *per bank that has offers* — each becomes an **"Opção N"** in the message, ordered best-`liquidAmount`-first, and that grouping is what lets two banks both offering 36x show up as distinct choices instead of two identical anonymous lines. (An earlier version flattened everything and deduplicated by `installments` for the same reason; the grouping replaced it and no longer throws the weaker bank's terms away.)
+Reading the response: `opcoesDaSimulacao()` returns one block *per bank that has offers*, ordered best-`liquidAmount`-first, each carrying its `banco` (`bankName`). That grouping is what lets two banks both offering 36x show up as distinct choices instead of two identical lines. (An earlier version flattened everything and deduplicated by `installments`; the grouping replaced it and no longer throws the weaker bank's terms away.)
+
+**The bank is named on the operator's screens and never in the client's text.** The wizard's offer list, the selection summary, the step-4 recap and the proposal-modal notice all show `banco`; `montarMensagemOfertas()` numbers the same blocks as **"Opção 1", "Opção 2"**. The split is deliberate — the operator needs to know which bank they are selling, the client does not — so anything new that renders offers must pick a side, and the message builder is the one that must stay anonymous.
 
 The text comes from `montarMensagemOfertas()` in `app.js`, shared with the Telegram path so the client sees the same wording either way — it takes blocks, and the Telegram side passes a single one. The `Opção N` header is printed **only when there is more than one block**: with one bank it separates nothing and the message stays exactly as it was. `MENSAGEM_SEM_OFERTA` is shared for the same reason.
 

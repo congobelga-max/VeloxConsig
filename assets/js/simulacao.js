@@ -286,6 +286,9 @@ function opcoesDaSimulacao(dados){
 
             return {
                 simulationId: banco.simulationId || "",
+                // Só para as telas do operador. A mensagem do cliente numera
+                // as opções justamente para não identificar o banco.
+                banco: banco.bankName || banco.bankId || "",
                 ofertas: ofertas,
                 melhor: ofertas.reduce((maior,x) => Math.max(maior, x.bruto), 0)
             };
@@ -386,8 +389,15 @@ async function consultarOfertasDoCliente(cliente){
                 0
             );
 
+            // O aviso é do operador: aqui os bancos são nomeados. A mensagem
+            // gerada ao lado continua numerando as opções.
+            const bancos = opcoes
+                .map(opcao => opcao.banco)
+                .filter(Boolean)
+                .join(", ");
+
             avisoProposta(
-                "✓ " + opcoes.length + (opcoes.length === 1 ? " opção" : " opções") +
+                "✓ " + (bancos || opcoes.length + " opções") +
                 " · " + condicoes +
                 (condicoes === 1 ? " condição encontrada." : " condições encontradas.")
             );

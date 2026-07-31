@@ -35,7 +35,7 @@ async function importarPlanilha(e){
 
     }catch(erro){
 
-        alert("Não foi possível ler esta planilha.");
+        notificar("Não foi possível ler esta planilha.", "erro");
         console.error(erro);
         e.target.value = "";
         return;
@@ -84,7 +84,10 @@ async function importarLeads(){
 
         processarPlanilha(workbook, null);
 
-        alert(clientes.length + " leads carregados de " + arquivo.nome + ".");
+        notificar(
+            clientes.length + " leads carregados de " + arquivo.nome + ".",
+            "sucesso"
+        );
 
     }catch(erro){
 
@@ -741,7 +744,7 @@ function copiarTexto(texto, tipo){
     document.execCommand("copy");
     document.body.removeChild(input);
 
-    alert(tipo + " copiado!");
+    notificar(tipo + " copiado!", "sucesso");
 
 }
 
@@ -1151,7 +1154,7 @@ function limparPesquisa(){
 let clientePropostaAtual=null;
 function abrirModalProposta(id){
  clientePropostaAtual=clientes.find(c=>String(c.id)===String(id));
- if(!clientePropostaAtual)return alert("Cliente não encontrado.");
+ if(!clientePropostaAtual)return notificar("Cliente não encontrado.", "erro");
  document.getElementById("clienteProposta").textContent="Cliente: "+clientePropostaAtual.nome;
  document.getElementById("textoTelegram").value=""; document.getElementById("mensagemProposta").value="";
  const av=document.getElementById("avisoProposta"); av.style.display="none"; av.textContent="";
@@ -1303,7 +1306,7 @@ function gerarProposta(){
  if(!clientePropostaAtual)return;
 
  const t=normalizarRetornoTelegram(document.getElementById("textoTelegram").value);
- if(!t)return alert("Cole primeiro a resposta do Telegram.");
+ if(!t)return notificar("Cole primeiro a resposta do Telegram.", "erro");
 
  const av=document.getElementById("avisoProposta");
  const campo=document.getElementById("mensagemProposta");
@@ -1437,11 +1440,11 @@ async function copiarProposta(){
 
     const mensagem = document.getElementById("mensagemProposta").value.trim();
 
-    if(!mensagem) return alert("Gere a proposta primeiro.");
+    if(!mensagem) return notificar("Gere a proposta primeiro.", "erro");
 
     await copiarParaAreaDeTransferencia(mensagem);
 
-    alert("Proposta copiada!");
+    notificar("Proposta copiada!", "sucesso");
 
 }
 
@@ -1452,7 +1455,7 @@ function enviarPropostaWhatsApp(){
 
     const mensagem = document.getElementById("mensagemProposta").value.trim();
 
-    if(!mensagem) return alert("Gere a proposta primeiro.");
+    if(!mensagem) return notificar("Gere a proposta primeiro.", "erro");
 
     abrirWhatsappComTexto(clientePropostaAtual.telefone, mensagem);
 

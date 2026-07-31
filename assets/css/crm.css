@@ -487,6 +487,106 @@ body{
 
 
 /* ===============================
+   TOASTS
+   z-index acima do modal do Bootstrap (1055): boa parte dos avisos dispara
+   com um modal aberto — copiar proposta, gerar contrato.
+================================ */
+
+.toasts{
+    position:fixed;
+    top:14px;
+    right:14px;
+    z-index:2000;
+    display:flex;
+    flex-direction:column;
+    gap:9px;
+    max-width:min(380px, calc(100vw - 28px));
+    pointer-events:none;
+}
+
+.toast-vc{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    padding:12px 13px;
+    border-radius:13px;
+    background:#fff;
+    box-shadow:0 6px 22px rgba(0,0,0,.18);
+    border-left:4px solid #999;
+    font-size:14px;
+    font-weight:600;
+    color:#222;
+    pointer-events:auto;
+    opacity:0;
+    transform:translateX(18px);
+    transition:opacity .2s ease, transform .2s ease;
+}
+
+.toast-vc.visivel{
+    opacity:1;
+    transform:translateX(0);
+}
+
+.toast-vc.saindo{
+    opacity:0;
+    transform:translateX(18px);
+}
+
+.toast-vc i{
+    font-size:17px;
+    line-height:1.35;
+}
+
+.toastTexto{
+    flex:1;
+    /* Mensagem de erro de API pode vir longa. */
+    overflow-wrap:anywhere;
+}
+
+.toastFechar{
+    border:none;
+    background:none;
+    padding:0;
+    color:#9aa1ad;
+    font-size:12px;
+    line-height:1.4;
+}
+
+.toast-sucesso{ border-left-color:#1e9e57; }
+.toast-sucesso i:first-child{ color:#1e9e57; }
+
+.toast-erro{ border-left-color:#dc3545; }
+.toast-erro i:first-child{ color:#dc3545; }
+
+.toast-info{ border-left-color:var(--laranja); }
+.toast-info i:first-child{ color:var(--laranja); }
+
+/* No celular ocupa a largura toda, no topo. */
+@media (max-width:575px){
+
+    .toasts{
+        top:10px;
+        left:10px;
+        right:10px;
+        max-width:none;
+    }
+
+    .toast-vc{
+        transform:translateY(-14px);
+    }
+
+    .toast-vc.visivel{
+        transform:translateY(0);
+    }
+
+    .toast-vc.saindo{
+        transform:translateY(-14px);
+    }
+
+}
+
+
+/* ===============================
    FILTROS DE DATA DO PAINEL
 ================================ */
 

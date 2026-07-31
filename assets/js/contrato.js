@@ -41,7 +41,7 @@ function abrirModalContrato(id){
     contratoCliente = clientes.find(c => String(c.id) === String(id));
 
     if(!contratoCliente){
-        alert("Cliente não encontrado.");
+        notificar("Cliente não encontrado.", "erro");
         return;
     }
 
@@ -151,7 +151,9 @@ function atualizarResumoSelecaoContrato(){
     }
 
     caixa.innerHTML =
-        "<span>Parcela selecionada</span><strong>" +
+        "<span>Parcela selecionada" +
+        (contratoSelecao.banco ? " · " + escaparHtml(contratoSelecao.banco) : "") +
+        "</span><strong>" +
         contratoSelecao.prazo + "x de R$ " + escaparHtml(contratoSelecao.parcela) +
         " → recebe R$ " + escaparHtml(contratoSelecao.liberado) + "</strong>";
 
@@ -297,7 +299,8 @@ function renderizarOfertasContrato(reaproveitando){
           '<button type="button" onclick="carregarOfertasContrato(true)">Consultar novamente</button></div>'
         : "";
 
-    // Mesma regra da proposta: o banco não é identificado, cada bloco é uma opção.
+    // Aqui quem lê é o operador: o banco aparece com nome. É só na mensagem
+    // enviada ao cliente que os blocos viram "Opção 1", "Opção 2"...
     painel.innerHTML = origem + contratoOpcoes.map((opcao, indice)=>{
 
         const linhas = opcao.ofertas.map(oferta=>{
@@ -314,7 +317,11 @@ function renderizarOfertasContrato(reaproveitando){
 
         }).join("");
 
-        return '<div class="blocoOpcao"><h6>Opção ' + (indice + 1) + "</h6>" + linhas + "</div>";
+        const titulo = opcao.banco
+            ? escaparHtml(opcao.banco)
+            : "Opção " + (indice + 1);
+
+        return '<div class="blocoOpcao"><h6>' + titulo + "</h6>" + linhas + "</div>";
 
     }).join("");
 
@@ -367,11 +374,11 @@ async function copiarTextoContrato(){
 
     const mensagem = textoParaEnvioContrato();
 
-    if(!mensagem) return alert("Nenhum texto para copiar.");
+    if(!mensagem) return notificar("Nenhum texto para copiar.", "erro");
 
     await copiarParaAreaDeTransferencia(mensagem);
 
-    alert("Texto copiado!");
+    notificar("Texto copiado!", "sucesso");
 
 }
 
@@ -380,7 +387,7 @@ function enviarTextoContratoWhatsApp(){
 
     const mensagem = textoParaEnvioContrato();
 
-    if(!mensagem) return alert("Nenhum texto para enviar.");
+    if(!mensagem) return notificar("Nenhum texto para enviar.", "erro");
 
     abrirWhatsappComTexto(contratoCliente.telefone, mensagem);
 
@@ -399,6 +406,7 @@ function escolherOfertaContrato(valor){
     contratoSelecao = {
         simulationId: partes[0],
         offerId: partes[1],
+        banco: opcao.banco || "",
         prazo: oferta.prazo,
         parcela: oferta.parcela,
         liberado: oferta.liberado
@@ -981,6 +989,7 @@ function renderizarResumoContrato(){
         '<div class="blocoOpcao"><h6>Resumo</h6>' +
         linha("Cliente", cliente.nome || contratoCliente.nome) +
         linha("CPF", contratoCliente.cpf) +
+        (contratoSelecao.banco ? linha("Banco", contratoSelecao.banco) : "") +
         linha("Parcela", contratoSelecao.prazo + "x de R$ " + contratoSelecao.parcela) +
         linha("Valor liberado", "R$ " + contratoSelecao.liberado) +
         linha("Cadastro", pendencias ? pendencias + " campo(s) pendente(s)" : "Validado") +

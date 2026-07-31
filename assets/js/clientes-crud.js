@@ -569,7 +569,7 @@ async function confirmarExclusaoCliente(idApi){
 
     }catch(erro){
 
-        alert("Não foi possível excluir: " + erro.message);
+        notificar("Não foi possível excluir: " + erro.message, "erro");
         console.error("Falha ao excluir cliente:", erro);
 
     }
