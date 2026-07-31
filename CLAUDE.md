@@ -8,6 +8,16 @@ There is no build step, package manager, test suite, or linter. The app is stati
 
 - Open `http://localhost/veloxconsig/` in a browser (Apache must be running in the XAMPP control panel).
 - To test a change: hard-reload the page (Ctrl+F5) — `app.js` is cached aggressively.
+
+## Deploy
+
+Production is `https://crm.veloxconsig.com.br/`, deployed from GitHub (`congobelga-max/veloxconsig`, branch `main`) via EasyPanel, **behind Cloudflare**.
+
+Cloudflare caches everything under `assets/` for four hours (`Cache-Control: max-age=14400`) but not the `.php` documents. A deploy therefore goes live as *new HTML calling old JS and CSS* — the page looks broken or half-updated, and it looks exactly like a failed deploy when the deploy in fact worked. It was measured: `painel.js` was served at 16215 bytes against 19692 on disk, `cf-cache-status: HIT`, `age: 6922`.
+
+Every local asset URL in `index.php` and `login.php` therefore carries `?v=<versão>`. **Bump that value in the same commit whenever anything under `assets/` changes** — a new URL is a new cache key, so the browser and Cloudflare both fetch the new file, and no cache purge is needed. CDN URLs are left alone; they are already versioned by path.
+
+Before blaming a deploy, compare the byte counts: `Invoke-WebRequest https://crm.veloxconsig.com.br/assets/js/painel.js` against the local file. Equal sizes mean the deploy landed and the problem is elsewhere.
 - Clipboard auto-paste (`colarTelegramAutomaticamente`) requires a secure context; it silently no-ops over plain `http://` on some browsers. `localhost` counts as secure in Chrome.
 
 `index.php` contains no PHP — it is plain HTML with a `.php` extension. All dependencies (Bootstrap 5.3, Bootstrap Icons, SheetJS/`xlsx` 0.18.5) load from CDNs, so the app needs internet access to work.

@@ -20,12 +20,16 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-<link rel="stylesheet" href="assets/css/style.css">
-<link rel="stylesheet" href="assets/css/crm.css">
+<!-- ?v= é a versão do deploy. O site fica atrás do Cloudflare, que guarda
+     CSS e JS por 4 horas (Cache-Control: max-age=14400): sem trocar a URL,
+     uma publicação nova serve HTML atual com script velho. Suba este valor
+     a cada deploy que mexa em arquivos de assets/. -->
+<link rel="stylesheet" href="assets/css/style.css?v=20260731a">
+<link rel="stylesheet" href="assets/css/crm.css?v=20260731a">
 
 <!-- Trava de acesso: precisa rodar antes de qualquer renderização.
      Para desativar o login, basta remover estas duas tags. -->
-<script src="assets/js/auth.js"></script>
+<script src="assets/js/auth.js?v=20260731a"></script>
 <script>exigirAutenticacao();</script>
 </head>
 
@@ -484,15 +488,15 @@ JOSE DA SILVA;11912345678;50181123878</pre>
 <script src="https://cdn.datatables.net/responsive/3.0.3/js/dataTables.responsive.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/3.0.3/js/responsive.bootstrap5.min.js"></script>
 
-<script src="assets/js/api.js"></script>
-<script src="assets/js/csv.js"></script>
-<script src="assets/js/mensagens.js"></script>
-<script src="assets/js/app.js"></script>
-<script src="assets/js/clientes-crud.js"></script>
-<script src="assets/js/importacoes.js"></script>
-<script src="assets/js/simulacao.js"></script>
-<script src="assets/js/contrato.js"></script>
-<script src="assets/js/painel.js"></script>
+<script src="assets/js/api.js?v=20260731a"></script>
+<script src="assets/js/csv.js?v=20260731a"></script>
+<script src="assets/js/mensagens.js?v=20260731a"></script>
+<script src="assets/js/app.js?v=20260731a"></script>
+<script src="assets/js/clientes-crud.js?v=20260731a"></script>
+<script src="assets/js/importacoes.js?v=20260731a"></script>
+<script src="assets/js/simulacao.js?v=20260731a"></script>
+<script src="assets/js/contrato.js?v=20260731a"></script>
+<script src="assets/js/painel.js?v=20260731a"></script>
 
 </body>
 </html>
