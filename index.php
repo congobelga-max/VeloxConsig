@@ -415,7 +415,35 @@ JOSE DA SILVA;11912345678;50181123878</pre>
 </div>
 
 <!-- =========================
-     MODAL GERAR CONTRATO (3 etapas)
+     MODAL PROPOSTAS DO CLIENTE
+     Consulta direta do card ou da tabela do Painel.
+========================= -->
+
+<div class="modal fade" id="modalPropostas" tabindex="-1" aria-hidden="true">
+ <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+  <div class="modal-content modalClienteConteudo">
+
+   <div class="modal-header">
+    <h5 class="modal-title">🔎 Propostas do cliente</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+   </div>
+
+   <div class="modal-body">
+    <div id="clientePropostas" class="clienteProposta"></div>
+    <div id="listaPropostasCliente"></div>
+   </div>
+
+   <div class="modal-footer">
+    <button type="button" class="btnSecundario" data-bs-dismiss="modal">Fechar</button>
+   </div>
+
+  </div>
+ </div>
+</div>
+
+
+<!-- =========================
+     MODAL GERAR CONTRATO (4 etapas)
 ========================= -->
 
 <div class="modal fade" id="modalContrato" tabindex="-1" aria-hidden="true">
@@ -453,7 +481,8 @@ JOSE DA SILVA;11912345678;50181123878</pre>
 
    <div class="modal-footer">
 
-    <!-- Copiar/enviar o texto da etapa atual: ofertas na 1, resumo na 4. -->
+    <!-- Copiar/enviar o texto da etapa atual: ofertas na 1, pedido de dados na
+         2, dados bancários na 3, resumo e link na 4. Visíveis sempre. -->
     <div id="acoesOfertaContrato" class="acoesOfertaContrato">
 
      <button type="button" class="btnLinha btnLinhaCopiar" onclick="copiarTextoContrato()">

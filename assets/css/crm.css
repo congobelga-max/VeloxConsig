@@ -728,9 +728,10 @@ body{
 }
 
 /* Fica no rodapé do modal, à esquerda: o auto empurra Voltar/Avançar para a
-   ponta direita. O display é controlado pelo JS — some fora da etapa 1. */
+   ponta direita. Visível em todas as etapas — cada uma tem o seu texto —,
+   então nenhum JS precisa ligar ou desligar isto. */
 .acoesOfertaContrato{
-    display:none;
+    display:flex;
     flex-wrap:wrap;
     gap:8px;
     margin:0 auto 0 0;
@@ -1009,29 +1010,60 @@ body{
     font-weight:700;
 }
 
-.contratoGerado{
-    border:1px solid #b7e4c7;
-    background:#f2fbf5;
-    border-radius:14px;
-    padding:14px;
+.propostaConsultada{
+    border:1px solid #eceef1;
+    border-radius:12px;
+    padding:10px 12px;
     margin-top:12px;
+    background:#fafbfc;
 }
 
-.contratoGerado h6{
-    margin:0 0 9px;
-    color:#136b38;
-    font-weight:bold;
-}
-
-.contratoGerado p{
+.propostaConsultada h6{
     margin:0 0 6px;
-    font-size:13px;
-    color:#333;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.4px;
+    color:#888;
+    font-weight:700;
+}
+
+/* Links de assinatura são longos: quebram dentro da linha em vez de esticar
+   o modal na horizontal. */
+.propostaConsultada a{
+    color:var(--laranja);
     overflow-wrap:anywhere;
 }
 
-.contratoGerado .btnLinha{
-    text-decoration:none;
+/* O valor ocupa o resto da linha para o copiar encostar na borda direita. */
+.propostaConsultada .linhaResumo strong{
+    flex:1;
+}
+
+.linhaLink{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:8px;
+}
+
+.acoesProposta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:10px;
+}
+
+.acoesProposta .btnLinha{
+    flex:1 1 auto;
+    justify-content:center;
+    margin:0;
+}
+
+/* A proposta recém-criada é mostrada na mesma lista da consulta; este é o
+   destaque que a diferencia das anteriores. */
+.propostaConsultada.recemCriada{
+    border-color:#b7e4c7;
+    background:#f2fbf5;
 }
 
 

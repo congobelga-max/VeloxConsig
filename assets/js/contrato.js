@@ -107,7 +107,12 @@ function mostrarEtapaContrato(numero){
         avancar.style.display = contratoProposta ? "none" : "inline-flex";
     }
 
-    atualizarAcoesOfertaContrato();
+    // A etapa 3 é a única sem texto para o cliente — a conta já foi pedida na
+    // 2. A decisão olha só o número da etapa: o CSS deixa os botões visíveis
+    // por padrão, então uma falha aqui os mantém na tela, nunca some com eles.
+    const acoes = document.getElementById("acoesOfertaContrato");
+
+    if(acoes) acoes.style.display = numero === 3 ? "none" : "flex";
 
     atualizarBotaoAvancar();
 
@@ -126,8 +131,9 @@ function atualizarBotaoAvancar(){
     avancar.textContent =
         contratoEtapa === TOTAL_ETAPAS_CONTRATO ? "📄 Gerar contrato" : "Avançar";
 
-    // A etapa 2 é a única que trava, e só enquanto faltar campo obrigatório.
-    avancar.disabled = contratoEtapa === 2 ? !validarCadastroContrato() : false;
+    // Nunca desabilitado fora de um carregamento: botão apagado não diz o que
+    // falta. A etapa 2 valida no clique e nomeia o campo que está errado.
+    avancar.disabled = false;
 
 }
 
@@ -325,38 +331,123 @@ function renderizarOfertasContrato(reaproveitando){
 
     }).join("");
 
-    atualizarAcoesOfertaContrato();
-
 }
 
 
-// Copiar e WhatsApp vivem no rodapé do modal, junto de Voltar e Avançar. Os
-// mesmos dois botões servem às duas telas que têm texto para o cliente: as
-// ofertas na etapa 1 e o resumo da contratação na etapa 4.
-function atualizarAcoesOfertaContrato(){
-
-    const acoes = document.getElementById("acoesOfertaContrato");
-
-    if(!acoes) return;
-
-    acoes.style.display = textoParaEnvioContrato() ? "flex" : "none";
-
-}
-
-
+// Copiar e WhatsApp ficam no rodapé do modal, junto de Voltar e Avançar, e
+// aparecem em todas as etapas: cada uma tem o texto que o operador precisa
+// mandar naquele ponto do atendimento.
+//
+//   1  ofertas                                  2  pedido de dados
+//   3  nenhum (só cadastro da conta)            4  resumo / link de assinatura
+//
+// A etapa 3 não envia nada: os dados bancários já foram pedidos junto com os
+// do cadastro, na etapa 2, para não fatiar o pedido em duas mensagens.
 function textoParaEnvioContrato(){
 
     if(contratoEtapa === 1) return mensagemOfertasContrato();
+    if(contratoEtapa === 2) return mensagemDadosCadastroContrato();
+    if(contratoEtapa === 3) return "";
 
-    if(contratoEtapa === TOTAL_ETAPAS_CONTRATO){
+    const campo = document.getElementById("mensagemContrato");
 
-        const campo = document.getElementById("mensagemContrato");
+    // Na etapa 4 o texto é editável: vale o que estiver no campo. Se ele ainda
+    // não existe (o resumo é desenhado depois), monta na hora.
+    return campo && campo.value.trim()
+        ? campo.value.trim()
+        : mensagemResumoContrato();
 
-        return campo ? campo.value.trim() : "";
+}
+
+
+function primeiroNomeContrato(){
+
+    return String(contratoCliente && contratoCliente.nome || "")
+        .trim()
+        .split(/\s+/)[0];
+
+}
+
+
+// Os `label` que a API manda são escritos para o operador ("o número do RG do
+// cliente"). Para o cliente eles são reescritos aqui, na primeira pessoa.
+const ROTULOS_CLIENTE = {
+    nome:"Seu nome completo",
+    nome_mae:"Nome completo da sua mãe",
+    data_nascimento:"Sua data de nascimento",
+    celular:"Seu celular com DDD",
+    email:"Seu e-mail",
+    genero:"Gênero",
+    estado_civil:"Estado civil",
+    rg:"Número do RG (somente números)",
+    orgao_emissor:"Órgão emissor do RG (ex: SSP)",
+    uf_emissor:"Estado emissor do RG (sigla, ex: MG)",
+    data_expedicao:"Data de emissão do RG (DD/MM/AAAA)",
+    endereco_cep:"CEP",
+    endereco_rua:"Rua",
+    endereco_numero:"Número",
+    endereco_complemento:"Complemento",
+    endereco_bairro:"Bairro",
+    endereco_cidade:"Cidade",
+    endereco_uf:"Estado (UF)"
+};
+
+
+// Só entra no pedido se o cliente ainda não tem conta cadastrada — pedir um
+// dado que a API já tem só atrasa a resposta.
+function blocoContaContrato(){
+
+    const cliente = (contratoDadosCliente && contratoDadosCliente.client) || {};
+    const contas = Array.isArray(cliente.bankAccounts) ? cliente.bankAccounts : [];
+
+    if(contas.length) return "";
+
+    return "🏦 Conta para receber o valor\n" +
+        "• Banco\n" +
+        "• Agência\n" +
+        "• Conta com dígito\n" +
+        "• Tipo (corrente ou poupança)";
+
+}
+
+
+// Documentos e conta bancária no mesmo pedido: o cliente responde uma vez só.
+function mensagemDadosCadastroContrato(){
+
+    const nome = primeiroNomeContrato();
+
+    const pendentes = (contratoValidacao && contratoValidacao.pendingFields) || [];
+    const conta = blocoContaContrato();
+
+    if(!pendentes.length && !conta){
+
+        return "Oi, " + nome + "! Seu cadastro está completo aqui 😊\n\n" +
+            "Confirma que seus dados seguem corretos para eu dar andamento na proposta?";
 
     }
 
-    return "";
+    const blocos = [];
+
+    if(pendentes.length){
+
+        blocos.push(
+            "📄 Documentos\n" +
+            pendentes
+                .map(campo => "• " + (ROTULOS_CLIENTE[campo.field] || campo.label || campo.field))
+                .join("\n")
+        );
+
+    }
+
+    if(conta) blocos.push(conta);
+
+    const umItemSo = pendentes.length === 1 && !conta;
+
+    return "Oi, " + nome + "! Para dar andamento na sua proposta, preciso de " +
+        (umItemSo ? "mais um dado" : "mais alguns dados") + " 😊\n\n" +
+        blocos.join("\n\n") + "\n\n" +
+        (conta ? "A conta precisa estar no seu nome. " : "") +
+        "Pode me enviar por aqui?";
 
 }
 
@@ -424,6 +515,10 @@ function escolherOfertaContrato(valor){
 }
 
 
+// O /select acontece aqui, ao sair da etapa 1, e não lá no fim junto da
+// proposta: a validação do cadastro depende dele. Os `pendingFields` que
+// /clients/validate devolve variam conforme o banco da oferta escolhida —
+// sem a seleção registrada, a etapa 2 pede os campos errados.
 async function confirmarOfertaContrato(){
 
     if(!contratoSelecao){
@@ -435,6 +530,8 @@ async function confirmarOfertaContrato(){
 
     try{
 
+        // Trocar de oferta limpa a confirmação, então a nova escolha é
+        // registrada; voltar e avançar com a mesma oferta não reenvia.
         if(!contratoSelecaoConfirmada){
 
             await chamarOpenCredit(
@@ -593,13 +690,43 @@ function renderizarCadastroContrato(){
 }
 
 
+// Os regex vêm da API e são literais: `^\d{5,14}$` recusa o RG com pontuação,
+// `^(AC|AL|...)$` recusa "mg" em minúscula. Sem normalizar, o operador digita
+// o valor certo, o botão não libera e nada explica o motivo.
+function normalizarCampoPendente(campo, valor){
+
+    const texto = String(valor || "").trim();
+    const regex = String(campo.regex || "");
+
+    // Tirando \d, quantificadores e âncoras, sobra o que o padrão exige de
+    // literal. Vazio = só dígitos, então a máscara digitada pode cair fora.
+    // A data (`^\d{2}/\d{2}/\d{4}$`) deixa "//" e não entra aqui.
+    const esqueleto = regex
+        .replace(/\\d/g, "")
+        .replace(/\{\d+(,\d+)?\}/g, "")
+        .replace(/[\^\$]/g, "");
+
+    if(/\\d/.test(regex) && esqueleto === ""){
+        return somenteNumeros(texto);
+    }
+
+    // Padrão sem faixa minúscula (a lista de UFs) exige maiúsculas.
+    if(!/a-z/.test(regex) && /[A-Z]/.test(regex)){
+        return texto.toUpperCase();
+    }
+
+    return texto;
+
+}
+
+
 // A etapa 2 só libera com todos os pendentes batendo o regex que a própria
-// API mandou junto do campo.
+// API mandou junto do campo — depois de normalizados.
 function validarCadastroContrato(){
 
     const pendentes = (contratoValidacao && contratoValidacao.pendingFields) || [];
 
-    let completo = true;
+    const invalidos = [];
 
     pendentes.forEach((campo, indice)=>{
 
@@ -607,7 +734,7 @@ function validarCadastroContrato(){
 
         if(!entrada) return;
 
-        const valor = entrada.value.trim();
+        const valor = normalizarCampoPendente(campo, entrada.value);
 
         let valido = valor !== "";
 
@@ -622,17 +749,21 @@ function validarCadastroContrato(){
 
         }
 
+        // Campo em branco ainda não é erro: só o preenchido errado fica vermelho.
         entrada.classList.toggle("invalido", !valido && valor !== "");
 
-        if(!valido) completo = false;
+        if(!valido) invalidos.push(campo);
 
     });
 
-    const avancar = document.getElementById("btnAvancarContrato");
+    return invalidos;
 
-    if(avancar && !contratoOcupado) avancar.disabled = !completo;
+}
 
-    return completo;
+
+function rotuloCampoPendente(campo){
+
+    return ROTULOS_CLIENTE[campo.field] || campo.label || campo.field;
 
 }
 
@@ -641,9 +772,18 @@ function validarCadastroContrato(){
 // API: só passa para a etapa 3 se ela parar de apontar pendências.
 async function confirmarCadastroContrato(){
 
-    if(!validarCadastroContrato()){
-        avisoContrato("Complete os campos pendentes para avançar.", "erro");
+    const invalidos = validarCadastroContrato();
+
+    if(invalidos.length){
+
+        avisoContrato(
+            (invalidos.length === 1 ? "Confira o campo: " : "Confira os campos: ") +
+            invalidos.map(rotuloCampoPendente).join(" · "),
+            "erro"
+        );
+
         return;
+
     }
 
     const pendentes = (contratoValidacao && contratoValidacao.pendingFields) || [];
@@ -653,7 +793,12 @@ async function confirmarCadastroContrato(){
     pendentes.forEach((campo, indice)=>{
 
         const entrada = document.getElementById("pendente" + indice);
-        const valor = entrada ? entrada.value.trim() : "";
+
+        // Vai gravado o mesmo valor que passou na validação — normalizado —,
+        // não o que está na tela: a API aplica o mesmo regex do outro lado.
+        const valor = entrada
+            ? normalizarCampoPendente(campo, entrada.value)
+            : "";
 
         // `field` já vem no nome que o PATCH aceita (rg, orgao_emissor...).
         if(valor) alteracoes[campo.field] = valor;
@@ -996,16 +1141,19 @@ function renderizarResumoContrato(){
         linha("Conta de recebimento", descricaoContaContrato() || "—") +
         "</div>" +
 
-        '<div class="blocoOpcao"><h6>Mensagem para o cliente</h6>' +
-        '<textarea id="mensagemContrato" class="form-control campoProposta" rows="9" ' +
-        'oninput="atualizarAcoesOfertaContrato()"></textarea>' +
+        '<div class="blocoOpcao"><h6>Propostas deste CPF</h6>' +
+        '<button type="button" class="btnLinha btnLinhaCopiar" ' +
+        'onclick="consultarPropostasContrato()">' +
+        '<i class="bi bi-search"></i> Consultar proposta</button>' +
+        '<div id="listaPropostas"></div>' +
         "</div>" +
 
-        '<div id="resultadoContrato"></div>';
+        '<div class="blocoOpcao"><h6>Mensagem para o cliente</h6>' +
+        '<textarea id="mensagemContrato" class="form-control campoProposta" rows="9">' +
+        "</textarea>" +
+        "</div>";
 
     document.getElementById("mensagemContrato").value = mensagemResumoContrato();
-
-    atualizarAcoesOfertaContrato();
 
 }
 
@@ -1081,6 +1229,259 @@ function contaEscolhidaContrato(){
 }
 
 
+// ===============================
+// CONSULTA DE PROPOSTAS
+// GET /proposals?cpf= devolve {items:[...], meta:{total,page,limit}}.
+// Os campos são listados por Object.keys: nada do item fica de fora, mesmo
+// que a API passe a devolver algo que este código não conhece.
+// ===============================
+
+const ROTULOS_PROPOSTA = {
+    id:"ID interno",
+    cpf:"CPF",
+    bankId:"Banco (código)",
+    bankName:"Banco",
+    bankProposalId:"ID no banco",
+    bankProposalNo:"Nº da proposta",
+    status:"Situação",
+    statusOriginal:"Situação (original)",
+    statusDescricao:"Descrição",
+    signUrl:"Link de assinatura",
+    partnerId:"Parceiro",
+    createdAt:"Criada em",
+    updatedAt:"Atualizada em"
+};
+
+
+function valorPropostaHtml(chave, valor){
+
+    if(valor === null || valor === undefined || valor === "") return "—";
+
+    if(typeof valor === "object"){
+        return escaparHtml(JSON.stringify(valor));
+    }
+
+    const texto = String(valor);
+
+    // Link ganha um copiar encostado à direita, para quem só quer a URL.
+    if(/^https?:\/\//i.test(texto)){
+
+        return '<span class="linhaLink">' +
+            '<a href="' + escaparHtml(texto) + '" target="_blank" rel="noopener">' +
+            escaparHtml(texto) + "</a>" +
+            '<button type="button" class="btnCopiar" title="Copiar link" ' +
+            "onclick=\"copiarLinkProposta('" + escaparArgumento(texto) + "')\">" +
+            '<i class="bi bi-clipboard"></i></button>' +
+            "</span>";
+
+    }
+
+    // Datas ISO nas chaves de tempo viram o formato do operador.
+    if(/(At|Utc|Em)$/.test(chave) && /^\d{4}-\d{2}-\d{2}T/.test(texto)){
+        return escaparHtml(formatarDataHora(texto));
+    }
+
+    if(chave === "cpf") return escaparHtml(formatarCPF(texto));
+
+    return escaparHtml(texto);
+
+}
+
+
+function buscarPropostas(cpf){
+
+    return chamarOpenCredit("/proposals?cpf=" + encodeURIComponent(normalizarCpf(cpf)))
+        .then(dados => (dados && dados.items) || []);
+
+}
+
+
+// Busca e desenha numa caixa qualquer. Serve à etapa 4 do assistente e ao
+// modal aberto direto do Painel.
+async function carregarPropostasEm(caixa, cliente){
+
+    if(!caixa || !cliente) return;
+
+    caixa.innerHTML = '<div class="carregandoContrato">Consultando propostas...</div>';
+
+    let itens;
+
+    // O try cobre só a chamada: se ele envolvesse também a renderização, um
+    // erro ao desenhar apagaria a lista e apareceria como falha da API.
+    try{
+
+        itens = await buscarPropostas(cliente.cpf);
+
+    }catch(erro){
+
+        caixa.innerHTML = '<div class="erroContrato">' + escaparHtml(erro.message) + "</div>";
+
+        console.error("Falha ao consultar propostas:", erro);
+
+        return;
+
+    }
+
+    renderizarListaPropostas(caixa, itens, cliente);
+
+    notificar(
+        itens.length + (itens.length === 1
+            ? " proposta encontrada."
+            : " propostas encontradas."),
+        "sucesso"
+    );
+
+}
+
+
+function consultarPropostasContrato(){
+
+    return carregarPropostasEm(
+        document.getElementById("listaPropostas"),
+        contratoCliente
+    );
+
+}
+
+
+// Uma só forma de mostrar proposta na tela: serve à consulta, ao retorno do
+// POST que acabou de criar o contrato e ao modal do Painel.
+// `recemCriada` só muda o destaque.
+function renderizarListaPropostas(caixa, itens, cliente, recemCriada){
+
+    if(!caixa) return;
+
+    if(!itens.length){
+
+        caixa.innerHTML =
+            '<div class="semPendencias">Nenhuma proposta encontrada para este CPF.</div>';
+
+        return;
+
+    }
+
+    caixa.innerHTML = itens.map((item, indice)=>
+
+        '<div class="propostaConsultada' + (recemCriada ? " recemCriada" : "") + '"><h6>' +
+        (recemCriada
+            ? "✓ Contrato gerado"
+            : "Proposta " + (indice + 1) + " de " + itens.length) +
+        "</h6>" +
+
+        Object.keys(item).map(chave =>
+            '<div class="linhaResumo"><span>' +
+            escaparHtml(ROTULOS_PROPOSTA[chave] || chave) + "</span><strong>" +
+            valorPropostaHtml(chave, item[chave]) + "</strong></div>"
+        ).join("") +
+
+        // Sem signUrl não há o que mandar: a proposta ainda não gerou
+        // link de assinatura.
+        // cliente.id é somenteNumeros(cpf): vai cru, como nos cards.
+        (item.signUrl
+            ? '<div class="acoesProposta">' +
+              '<button type="button" class="btnLinha btnLinhaZap" ' +
+              "onclick=\"enviarLinkPropostaWhatsApp('" + escaparArgumento(item.signUrl) +
+              "','" + cliente.id + "')\">" +
+              '<i class="bi bi-whatsapp"></i> Enviar link ao cliente</button>' +
+              '<button type="button" class="btnLinha btnLinhaCopiar" ' +
+              "onclick=\"copiarMensagemProposta('" + escaparArgumento(item.signUrl) +
+              "','" + cliente.id + "')\">" +
+              '<i class="bi bi-clipboard"></i> Copiar mensagem</button>' +
+              "</div>"
+            : "") +
+
+        "</div>"
+
+    ).join("");
+
+}
+
+
+// Texto que acompanha o link de assinatura. Sem número de proposta nem id:
+// isso é controle interno e não diz nada ao cliente.
+function mensagemLinkProposta(link, nome){
+
+    return "Oi, " + String(nome || "").trim().split(/\s+/)[0] +
+        "! Seu contrato está pronto para assinatura 😊\n\n" +
+        "É só acessar o link abaixo e seguir as instruções:\n" + link + "\n\n" +
+        "Qualquer dúvida, é só me chamar por aqui.";
+
+}
+
+
+// O id vem no próprio botão: assim a lista funciona igual dentro do assistente
+// e no modal do Painel, sem depender de qual cliente está "atual".
+function enviarLinkPropostaWhatsApp(link, id){
+
+    if(!link) return notificar("Esta proposta não tem link de assinatura.", "erro");
+
+    const cliente = clientes.find(c => String(c.id) === String(id)) || contratoCliente;
+
+    if(!cliente) return notificar("Cliente não encontrado.", "erro");
+
+    abrirWhatsappComTexto(
+        cliente.telefone,
+        mensagemLinkProposta(link, cliente.nome)
+    );
+
+}
+
+
+// ===============================
+// MODAL DE PROPOSTAS (Painel)
+// Consulta direta do card ou da tabela, sem passar pelo assistente.
+// ===============================
+
+async function abrirPropostasCliente(id){
+
+    const cliente = clientes.find(c => String(c.id) === String(id));
+
+    if(!cliente) return notificar("Cliente não encontrado.", "erro");
+
+    document.getElementById("clientePropostas").textContent =
+        cliente.nome + " · " + cliente.cpf;
+
+    bootstrap.Modal
+        .getOrCreateInstance(document.getElementById("modalPropostas"))
+        .show();
+
+    await carregarPropostasEm(
+        document.getElementById("listaPropostasCliente"),
+        cliente
+    );
+
+}
+
+
+// O botão ao lado do link copia só a URL.
+async function copiarLinkProposta(link){
+
+    if(!link) return notificar("Esta proposta não tem link de assinatura.", "erro");
+
+    await copiarParaAreaDeTransferencia(link);
+
+    notificar("Link de assinatura copiado!", "sucesso");
+
+}
+
+
+// O botão de ação copia exatamente o que o WhatsApp enviaria — mesma função
+// de texto, para o cliente receber a mesma coisa pelos dois caminhos.
+async function copiarMensagemProposta(link, id){
+
+    if(!link) return notificar("Esta proposta não tem link de assinatura.", "erro");
+
+    const cliente = clientes.find(c => String(c.id) === String(id)) || contratoCliente;
+
+    if(!cliente) return notificar("Cliente não encontrado.", "erro");
+
+    await copiarParaAreaDeTransferencia(mensagemLinkProposta(link, cliente.nome));
+
+    notificar("Mensagem copiada!", "sucesso");
+
+}
+
+
 // A conta já foi cadastrada na etapa 3: aqui só entra a criação da proposta.
 async function gerarContrato(){
 
@@ -1106,7 +1507,8 @@ async function gerarContrato(){
 
     try{
 
-        // A oferta já foi fixada pelo /select: o corpo é simulationId + conta.
+        // A oferta já foi fixada pelo /select na etapa 1: por isso o corpo
+        // leva simulationId e conta, sem offerId.
         contratoProposta = await chamarOpenCredit("/proposals",{
             metodo:"POST",
             corpo:{
@@ -1123,9 +1525,27 @@ async function gerarContrato(){
 
         if(campo) campo.value = mensagemResumoContrato();
 
-        renderizarPropostaContrato();
+        // Mesmo formato da consulta, com os botões de enviar e copiar o link.
+        renderizarListaPropostas(
+            document.getElementById("listaPropostas"),
+            [contratoProposta],
+            contratoCliente,
+            true
+        );
 
-        enviarAssinaturaAoCliente();
+        // Sem o link não há o que enviar: busca o registro completo na API.
+        if(!contratoProposta.signUrl) await consultarPropostasContrato();
+
+        // Com a proposta criada não há mais o que avançar; o link vai ao
+        // cliente pelo botão da lista, quando o operador quiser.
+        const avancar = document.getElementById("btnAvancarContrato");
+
+        if(avancar) avancar.style.display = "none";
+
+        avisoContrato(
+            '✓ Contrato gerado. Use "Enviar link ao cliente" na lista abaixo.',
+            "info"
+        );
 
     }catch(erro){
 
@@ -1142,71 +1562,3 @@ async function gerarContrato(){
 }
 
 
-// Gerado o contrato, o link de assinatura vai para o cliente sem mais cliques.
-// A abertura acontece depois do await do POST, fora do gesto original, então
-// o bloqueador de pop-up pode barrar — nesse caso o operador é avisado e o
-// botão de WhatsApp do rodapé continua valendo.
-function enviarAssinaturaAoCliente(){
-
-    const link = contratoProposta && contratoProposta.signUrl;
-
-    if(!link){
-
-        avisoContrato(
-            "Contrato gerado, mas a API não devolveu o link de assinatura.",
-            "erro"
-        );
-
-        return;
-
-    }
-
-    const janela = abrirWhatsappComTexto(
-        contratoCliente.telefone,
-        textoParaEnvioContrato()
-    );
-
-    avisoContrato(
-        janela
-            ? "✓ Contrato gerado e link de assinatura enviado no WhatsApp."
-            : "✓ Contrato gerado. O navegador bloqueou a abertura do WhatsApp — " +
-              "use o botão WhatsApp aqui embaixo para enviar o link.",
-        janela ? "info" : "erro"
-    );
-
-}
-
-
-function renderizarPropostaContrato(){
-
-    const caixa = document.getElementById("resultadoContrato");
-
-    if(!caixa || !contratoProposta) return;
-
-    const numero = contratoProposta.bankProposalNo || contratoProposta.id || "";
-    const situacao = contratoProposta.status || "";
-    const descricao = contratoProposta.statusDescricao || "";
-    const link = contratoProposta.signUrl || "";
-
-    caixa.innerHTML =
-        '<div class="contratoGerado"><h6>✓ Contrato gerado</h6>' +
-        (numero ? "<p><strong>Proposta:</strong> " + escaparHtml(String(numero)) + "</p>" : "") +
-        (situacao ? "<p><strong>Situação:</strong> " + escaparHtml(situacao) + "</p>" : "") +
-        (descricao ? "<p>" + escaparHtml(descricao) + "</p>" : "") +
-        // O envio ao cliente é o botão de WhatsApp do rodapé: a mensagem
-        // acima já foi reescrita com este link.
-        (link
-            ? '<a class="btnLinha btnLinhaProposta" target="_blank" rel="noopener" href="' +
-              escaparHtml(link) + '">Abrir link de assinatura</a>'
-            : "") +
-        "</div>";
-
-    // Com a proposta criada não há mais o que avançar, mas copiar e enviar
-    // continuam — é assim que o link chega ao cliente.
-    const avancar = document.getElementById("btnAvancarContrato");
-
-    if(avancar) avancar.style.display = "none";
-
-    atualizarAcoesOfertaContrato();
-
-}

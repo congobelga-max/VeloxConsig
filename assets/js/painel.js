@@ -291,7 +291,10 @@ function botoesAcao(cliente){
         "✨ Montar proposta</button>" +
         '<button type="button" class="btnLinha btnLinhaContrato" ' +
         "onclick=\"abrirModalContrato('" + cliente.id + "')\">" +
-        "📄 Gerar contrato</button>";
+        "📄 Gerar contrato</button>" +
+        '<button type="button" class="btnLinha btnLinhaCopiar" ' +
+        "onclick=\"abrirPropostasCliente('" + cliente.id + "')\">" +
+        '<i class="bi bi-search"></i> Consultar proposta</button>';
 
 }
 
