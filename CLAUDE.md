@@ -112,6 +112,12 @@ The API's JWT carries `exp` about an hour out. `expiracaoDoToken()` decodes that
 
 DataTables `render` callbacks do no escaping of their own, so every one of them goes through `escaparHtml` / `escaparArgumento`.
 
+### Telegram
+
+Every WhatsApp button has a Telegram twin — Painel card/row, proposal modal, contract wizard footer, and each listed proposal. They share the message: `textoDeContato()` builds the approach text *and* writes `contato_inicial_<cpf>`, so reaching a lead on Telegram counts as contacted exactly like WhatsApp and the grid marks it the same way. `contatarPainel()` takes the channel as an argument rather than existing twice.
+
+**Telegram cannot pre-fill a message to a phone number.** `t.me/+<numero>` opens the right conversation but accepts no body; `t.me/share` accepts text but not a recipient. Since the recipient is what matters here, `abrirTelegramComTexto()` opens the conversation and puts the message on the clipboard, then says so in a toast — the operator pastes. Do not "fix" this by switching to `t.me/share`: that would ask the operator to pick the contact by hand, which is worse and loses the guarantee that the message goes to the right person.
+
 ### Toasts (`assets/js/toast.js`)
 
 `notificar(mensagem, tipo)` replaced every `alert()` in the app — `alert` freezes the page and, on a phone, covers whatever the operator was reading. Types are `sucesso` / `erro` / `info`, which set the colour and how long it stays (errors linger longest); an unknown type falls back to `info`, and an empty message is dropped rather than showing an empty box.

@@ -408,7 +408,8 @@ JOSE DA SILVA;11912345678;50181123878</pre>
    </div>
    <div class="modal-footer modalPropostaAcoes">
     <button class="btnCopiarProposta" onclick="copiarProposta()">Copiar</button>
-    <button class="btnEnviarProposta" onclick="enviarPropostaWhatsApp()"><i class="bi bi-whatsapp"></i> Enviar no WhatsApp</button>
+    <button class="btnEnviarProposta" onclick="enviarPropostaWhatsApp()"><i class="bi bi-whatsapp"></i> WhatsApp</button>
+    <button class="btnEnviarTelegram" onclick="enviarPropostaTelegram()"><i class="bi bi-telegram"></i> Telegram</button>
    </div>
   </div>
  </div>
@@ -493,6 +494,11 @@ JOSE DA SILVA;11912345678;50181123878</pre>
      <button type="button" class="btnLinha btnLinhaZap" onclick="enviarTextoContratoWhatsApp()">
       <i class="bi bi-whatsapp"></i>
       WhatsApp
+     </button>
+
+     <button type="button" class="btnLinha btnLinhaTelegram" onclick="enviarTextoContratoTelegram()">
+      <i class="bi bi-telegram"></i>
+      Telegram
      </button>
 
     </div>

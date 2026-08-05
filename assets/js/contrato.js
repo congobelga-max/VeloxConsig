@@ -485,6 +485,17 @@ function enviarTextoContratoWhatsApp(){
 }
 
 
+function enviarTextoContratoTelegram(){
+
+    const mensagem = textoParaEnvioContrato();
+
+    if(!mensagem) return notificar("Nenhum texto para enviar.", "erro");
+
+    abrirTelegramComTexto(contratoCliente.telefone, mensagem);
+
+}
+
+
 function escolherOfertaContrato(valor){
 
     const partes = String(valor).split("|");
@@ -1382,7 +1393,11 @@ function renderizarListaPropostas(caixa, itens, cliente, recemCriada){
               '<button type="button" class="btnLinha btnLinhaZap" ' +
               "onclick=\"enviarLinkPropostaWhatsApp('" + escaparArgumento(item.signUrl) +
               "','" + cliente.id + "')\">" +
-              '<i class="bi bi-whatsapp"></i> Enviar link ao cliente</button>' +
+              '<i class="bi bi-whatsapp"></i> Enviar no WhatsApp</button>' +
+              '<button type="button" class="btnLinha btnLinhaTelegram" ' +
+              "onclick=\"enviarLinkPropostaTelegram('" + escaparArgumento(item.signUrl) +
+              "','" + cliente.id + "')\">" +
+              '<i class="bi bi-telegram"></i> Enviar no Telegram</button>' +
               '<button type="button" class="btnLinha btnLinhaCopiar" ' +
               "onclick=\"copiarMensagemProposta('" + escaparArgumento(item.signUrl) +
               "','" + cliente.id + "')\">" +
@@ -1413,16 +1428,41 @@ function mensagemLinkProposta(link, nome){
 // e no modal do Painel, sem depender de qual cliente está "atual".
 function enviarLinkPropostaWhatsApp(link, id){
 
-    if(!link) return notificar("Esta proposta não tem link de assinatura.", "erro");
+    const envio = preparaEnvioLink(link, id);
+
+    if(envio) abrirWhatsappComTexto(envio.telefone, envio.mensagem);
+
+}
+
+
+function enviarLinkPropostaTelegram(link, id){
+
+    const envio = preparaEnvioLink(link, id);
+
+    if(envio) abrirTelegramComTexto(envio.telefone, envio.mensagem);
+
+}
+
+
+// Devolve null (já avisando) quando falta link ou cliente.
+function preparaEnvioLink(link, id){
+
+    if(!link){
+        notificar("Esta proposta não tem link de assinatura.", "erro");
+        return null;
+    }
 
     const cliente = clientes.find(c => String(c.id) === String(id)) || contratoCliente;
 
-    if(!cliente) return notificar("Cliente não encontrado.", "erro");
+    if(!cliente){
+        notificar("Cliente não encontrado.", "erro");
+        return null;
+    }
 
-    abrirWhatsappComTexto(
-        cliente.telefone,
-        mensagemLinkProposta(link, cliente.nome)
-    );
+    return {
+        telefone: cliente.telefone,
+        mensagem: mensagemLinkProposta(link, cliente.nome)
+    };
 
 }
 

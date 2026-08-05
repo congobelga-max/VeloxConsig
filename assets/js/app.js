@@ -684,42 +684,53 @@ function renderizarCards(){
 }
 
 // =========================
-// ABRIR WHATSAPP
+// PRIMEIRO CONTATO
 // =========================
 
-function abrirWhatsapp(numero, nome, id){
-
-    numero = String(numero || "").replace(/\D/g,"");
-
-    if(numero.length === 10 || numero.length === 11){
-        numero = "55" + numero;
-    }
+// Monta o texto da abordagem e registra o contato. Fica separado da abertura
+// porque WhatsApp e Telegram mandam a mesma mensagem e marcam o mesmo
+// histórico — só o canal muda.
+function textoDeContato(nome, id){
 
     const primeiroNome = String(nome || "").trim().split(/\s+/)[0];
     const chave = "contato_inicial_" + id;
-    const jaContatado = localStorage.getItem(chave) === "sim";
 
-    let mensagem;
+    if(localStorage.getItem(chave) === "sim"){
 
-    if(jaContatado){
-        mensagem =
-            "Oi, " + primeiroNome + "! Passando para dar continuidade ao nosso contato sobre as condições de crédito disponíveis para você. 😊\n\n" +
+        return "Oi, " + primeiroNome + "! Passando para dar continuidade ao nosso " +
+            "contato sobre as condições de crédito disponíveis para você. 😊\n\n" +
             "Caso tenha interesse, posso verificar as opções atualizadas e te enviar por aqui.";
-    }else{
-        // Uma das 50 redações de mensagens.js: leads seguidos não recebem o
-        // mesmo texto, e o cliente que já foi abordado sempre recebe o dele.
-        mensagem = mensagemInicial(primeiroNome, id);
 
-        const agora = new Date();
-        localStorage.setItem(chave, "sim");
-        localStorage.setItem("contato_data_" + id, agora.toLocaleDateString("pt-BR"));
-        localStorage.setItem("contato_hora_" + id, agora.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}));
-
-        atualizarDashboard();
     }
 
-    const url = "https://wa.me/" + numero + "?text=" + encodeURIComponent(mensagem);
-    window.open(url, "_blank");
+    // Uma das 50 redações de mensagens.js: leads seguidos não recebem o
+    // mesmo texto, e o cliente que já foi abordado sempre recebe o dele.
+    const mensagem = mensagemInicial(primeiroNome, id);
+
+    const agora = new Date();
+
+    localStorage.setItem(chave, "sim");
+    localStorage.setItem("contato_data_" + id, agora.toLocaleDateString("pt-BR"));
+    localStorage.setItem("contato_hora_" + id, agora.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}));
+
+    atualizarDashboard();
+
+    return mensagem;
+
+}
+
+
+function abrirWhatsapp(numero, nome, id){
+
+    return abrirWhatsappComTexto(numero, textoDeContato(nome, id));
+
+}
+
+
+function abrirTelegram(numero, nome, id){
+
+    return abrirTelegramComTexto(numero, textoDeContato(nome, id));
+
 }
 
 // =========================
@@ -1420,18 +1431,51 @@ async function copiarParaAreaDeTransferencia(texto){
 }
 
 
+function numeroInternacional(telefone){
+
+    const numero = somenteNumeros(telefone);
+
+    return (numero.length === 10 || numero.length === 11)
+        ? "55" + numero
+        : numero;
+
+}
+
+
 // Devolve a janela aberta (ou null): quem chama fora de um clique direto
 // precisa saber quando o bloqueador de pop-up barrou a abertura.
 function abrirWhatsappComTexto(telefone, texto){
 
-    let numero = somenteNumeros(telefone);
-
-    if(numero.length === 10 || numero.length === 11) numero = "55" + numero;
-
     return window.open(
-        "https://wa.me/" + numero + "?text=" + encodeURIComponent(texto),
+        "https://wa.me/" + numeroInternacional(telefone) +
+        "?text=" + encodeURIComponent(texto),
         "_blank"
     );
+
+}
+
+
+// O Telegram não tem equivalente ao ?text= do wa.me. `t.me/+<numero>` abre a
+// conversa certa mas não aceita corpo; `t.me/share` aceita texto mas não o
+// destinatário. Como o destinatário é o que importa aqui, abre-se a conversa
+// e a mensagem vai para a área de transferência — o operador cola.
+async function abrirTelegramComTexto(telefone, texto){
+
+    const copiou = await copiarParaAreaDeTransferencia(texto);
+
+    const janela = window.open(
+        "https://t.me/+" + numeroInternacional(telefone),
+        "_blank"
+    );
+
+    notificar(
+        copiou
+            ? "Telegram aberto — a mensagem está copiada, é só colar."
+            : "Telegram aberto. Não consegui copiar a mensagem automaticamente.",
+        copiou ? "info" : "erro"
+    );
+
+    return janela;
 
 }
 
@@ -1458,6 +1502,19 @@ function enviarPropostaWhatsApp(){
     if(!mensagem) return notificar("Gere a proposta primeiro.", "erro");
 
     abrirWhatsappComTexto(clientePropostaAtual.telefone, mensagem);
+
+}
+
+
+function enviarPropostaTelegram(){
+
+    if(!clientePropostaAtual) return;
+
+    const mensagem = document.getElementById("mensagemProposta").value.trim();
+
+    if(!mensagem) return notificar("Gere a proposta primeiro.", "erro");
+
+    abrirTelegramComTexto(clientePropostaAtual.telefone, mensagem);
 
 }
 

@@ -284,8 +284,12 @@ function botoesAcao(cliente){
 
     return '<button type="button" class="btnLinha btnLinhaZap" ' +
         "onclick=\"contatarPainel('" + somenteNumeros(cliente.celular) + "','" +
-        escaparArgumento(cliente.nome) + "','" + cliente.id + "')\">" +
+        escaparArgumento(cliente.nome) + "','" + cliente.id + "','whatsapp')\">" +
         '<i class="bi bi-whatsapp"></i> WhatsApp</button>' +
+        '<button type="button" class="btnLinha btnLinhaTelegram" ' +
+        "onclick=\"contatarPainel('" + somenteNumeros(cliente.celular) + "','" +
+        escaparArgumento(cliente.nome) + "','" + cliente.id + "','telegram')\">" +
+        '<i class="bi bi-telegram"></i> Telegram</button>' +
         '<button type="button" class="btnLinha btnLinhaProposta" ' +
         "onclick=\"montarProposta('" + cliente.id + "')\">" +
         "✨ Montar proposta</button>" +
@@ -549,11 +553,15 @@ function desenharPainel(){
 }
 
 
-// Abre o WhatsApp e redesenha: abrirWhatsapp() marca o primeiro contato no
+// Abre o canal escolhido e redesenha: os dois marcam o primeiro contato no
 // localStorage, e a linha precisa refletir isso na hora.
-function contatarPainel(numero, nome, id){
+function contatarPainel(numero, nome, id, canal){
 
-    abrirWhatsapp(numero, nome, id);
+    if(canal === "telegram"){
+        abrirTelegram(numero, nome, id);
+    }else{
+        abrirWhatsapp(numero, nome, id);
+    }
 
     atualizarContatosPainel();
 

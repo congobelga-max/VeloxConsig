@@ -722,6 +722,11 @@ body{
     background:var(--escuro);
 }
 
+/* Azul oficial do Telegram, para o operador distinguir o canal de relance. */
+.btnLinhaTelegram{
+    background:#229ED9;
+}
+
 .btnLinhaCopiar{
     background:#e9ecef;
     color:#222;
